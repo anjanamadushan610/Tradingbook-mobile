@@ -1,0 +1,83 @@
+name: trading_book
+description: TradingBook — Nexus Trader Social Trading Terminal
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+
+  # Dependency Injection
+  get_it: ^7.7.0
+  injectable: ^2.4.1
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Network
+  dio: ^5.4.3+1
+  web_socket_channel: ^3.0.1
+
+  # Secure Storage
+  flutter_secure_storage: ^9.0.0
+
+  # Local Storage
+  shared_preferences: ^2.2.3
+
+  # JSON / Code-gen
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # Image
+  cached_network_image: ^3.3.1
+  image_picker: ^1.2.3
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # UI Utilities
+  shimmer: ^3.0.0
+  timeago: ^3.6.1
+  intl: ^0.19.0
+  google_fonts: ^6.2.1
+
+  # Misc
+  url_launcher: ^6.2.6
+  package_info_plus: ^8.0.0
+  uuid: ^4.3.3
+
+  cupertino_icons: ^1.0.8
+  share_plus: ^12.0.2
+  lucide_icons: ^0.257.0
+  pinput: ^6.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  build_runner: ^2.4.11
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  injectable_generator: ^2.6.1
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/logo.png
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/icon.png"
+  min_sdk_android: 21
