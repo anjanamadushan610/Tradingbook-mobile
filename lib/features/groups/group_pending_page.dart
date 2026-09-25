@@ -81,7 +81,7 @@ class _GroupPendingPageState extends State<GroupPendingPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton.icon(
-                        style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+                        style: FilledButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
                         onPressed: () => _approve(p),
                         icon: const Icon(Icons.check_rounded),
                         label: const Text('Approve'),
