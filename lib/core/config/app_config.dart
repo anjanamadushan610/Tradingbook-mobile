@@ -46,7 +46,7 @@ class AppConfig {
 
   static String get wsBaseUrl => apiBaseUrl.replaceFirst(RegExp('^http'), 'ws');
 
-  static const String supportEmail = 'support@tradingbooknet.com';
+  static const String supportEmail = 'privacy@tradingbooknet.com';
   static String get privacyPolicyUrl => '$webBaseUrl/privacy';
   static String get termsUrl => '$webBaseUrl/terms';
   static String postUrl(String postId) => '$webBaseUrl/p/$postId';

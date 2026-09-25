@@ -64,7 +64,11 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
   Future<void> _loadCandles({bool silent = false}) async {
     if (!silent) setState(() => _loadingCandles = true);
     try {
-      final c = await _repo.candles(widget.symbol, interval: _interval, limit: 90);
+      final c = await _repo.candles(
+        widget.symbol,
+        interval: _interval,
+        limit: 90,
+      );
       if (mounted) {
         setState(() {
           _candles = c;
@@ -81,10 +85,16 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final starred = context.watch<WatchlistCubit>().state.contains(widget.symbol);
-    final quote = _quote?.items.where((q) => q.symbol == widget.symbol).firstOrNull;
+    final starred = context.watch<WatchlistCubit>().state.contains(
+      widget.symbol,
+    );
+    final quote = _quote?.items
+        .where((q) => q.symbol == widget.symbol)
+        .firstOrNull;
     final candles = _candles?.items ?? const <Candle>[];
-    final touched = _touched != null && _touched! < candles.length ? candles[_touched!] : null;
+    final touched = _touched != null && _touched! < candles.length
+        ? candles[_touched!]
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -92,17 +102,23 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
         actions: [
           IconButton(
             tooltip: starred ? 'Remove from watchlist' : 'Add to watchlist',
-            onPressed: () => context.read<WatchlistCubit>().toggle(widget.symbol),
-            icon: Icon(starred ? Icons.star_rounded : Icons.star_border_rounded,
-                color: starred ? AppColors.warning : null),
+            onPressed: () =>
+                context.read<WatchlistCubit>().toggle(widget.symbol),
+            icon: Icon(
+              starred ? Icons.star_rounded : Icons.star_border_rounded,
+              color: starred ? AppColors.warning : null,
+            ),
           ),
         ],
       ),
       body: _error != null && quote == null
-          ? ErrorView(error: _error, onRetry: () {
-              _loadQuote();
-              _loadCandles();
-            })
+          ? ErrorView(
+              error: _error,
+              onRetry: () {
+                _loadQuote();
+                _loadCandles();
+              },
+            )
           : RefreshIndicator(
               onRefresh: () async {
                 await Future.wait([_loadQuote(), _loadCandles(silent: true)]);
@@ -110,7 +126,8 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: 32),
                 children: [
-                  if (quote != null) _PriceHeader(quote: quote, fetchedAt: _quote!.fetchedAt),
+                  if (quote != null)
+                    _PriceHeader(quote: quote, fetchedAt: _quote!.fetchedAt),
                   if (touched != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -118,7 +135,10 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
                         '${Fmt.date(touched.time)} ${Fmt.clock(touched.time)}  '
                         'O ${Fmt.price(touched.open)}  H ${Fmt.price(touched.high)}  '
                         'L ${Fmt.price(touched.low)}  C ${Fmt.price(touched.close)}',
-                        style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant, fontFamily: 'JetBrainsMono'),
+                        style: AppTextStyles.caption.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontFamily: 'JetBrainsMono',
+                        ),
                       ),
                     ),
                   const SizedBox(height: 8),
@@ -127,14 +147,19 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
                     child: _loadingCandles && candles.isEmpty
                         ? const LoadingView()
                         : candles.isEmpty
-                            ? Center(child: Text('No chart data', style: TextStyle(color: cs.onSurfaceVariant)))
-                            : Padding(
-                                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                                child: _CandleChart(
-                                  candles: candles,
-                                  onTouch: (i) => setState(() => _touched = i),
-                                ),
-                              ),
+                        ? Center(
+                            child: Text(
+                              'No chart data',
+                              style: TextStyle(color: cs.onSurfaceVariant),
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                            child: _CandleChart(
+                              candles: candles,
+                              onTouch: (i) => setState(() => _touched = i),
+                            ),
+                          ),
                   ),
                   SizedBox(
                     height: 48,
@@ -164,9 +189,15 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: OutlinedButton.icon(
-                      onPressed: () => context.push(Routes.search('#${widget.symbol.replaceFirst('USDT', '')}')),
+                      onPressed: () => context.push(
+                        Routes.search(
+                          '#${widget.symbol.replaceFirst('USDT', '')}',
+                        ),
+                      ),
                       icon: const Icon(Icons.forum_outlined),
-                      label: Text('See posts about #${widget.symbol.replaceFirst('USDT', '')}'),
+                      label: Text(
+                        'See posts about #${widget.symbol.replaceFirst('USDT', '')}',
+                      ),
                     ),
                   ),
                   Padding(
@@ -174,7 +205,9 @@ class _MarketDetailPageState extends State<MarketDetailPage> {
                     child: Text(
                       'Prices from ${_quote?.provider ?? 'the exchange'}. The last candle is still forming. '
                       'For information only — not investment advice.',
-                      style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
+                      style: AppTextStyles.caption.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -199,18 +232,32 @@ class _PriceHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(Fmt.price(quote.price), style: AppTextStyles.monoLarge.copyWith(fontSize: 30, color: cs.onSurface)),
+          Text(
+            Fmt.price(quote.price),
+            style: AppTextStyles.monoLarge.copyWith(
+              fontSize: 30,
+              color: cs.onSurface,
+            ),
+          ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(quote.isUp ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded, color: color),
+              Icon(
+                quote.isUp
+                    ? Icons.arrow_drop_up_rounded
+                    : Icons.arrow_drop_down_rounded,
+                color: color,
+              ),
               Text(
-                '${Fmt.signed(quote.change24h)} (${Fmt.percent(quote.changePercent24h)}) 24h',
+                '${Fmt.priceChange(quote.change24h, quote.price)} (${Fmt.percent(quote.changePercent24h)}) 24h',
                 style: AppTextStyles.titleSmall.copyWith(color: color),
               ),
             ],
           ),
-          Text('Updated ${Fmt.age(fetchedAt)}', style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant)),
+          Text(
+            'Updated ${Fmt.age(fetchedAt)}',
+            style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -225,27 +272,43 @@ class _Stats extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     Widget cell(String label, String value) => Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant)),
-              const SizedBox(height: 2),
-              Text(value, style: AppTextStyles.mono.copyWith(color: cs.onSurface, fontSize: 13)),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
           ),
-        );
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppTextStyles.mono.copyWith(
+              color: cs.onSurface,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(children: [cell('24h high', Fmt.price(quote.high24h)), cell('24h low', Fmt.price(quote.low24h))]),
+            Row(
+              children: [
+                cell('24h high', Fmt.price(quote.high24h)),
+                cell('24h low', Fmt.price(quote.low24h)),
+              ],
+            ),
             const SizedBox(height: 14),
-            Row(children: [
-              cell('24h volume', Fmt.volume(quote.volume24h)),
-              cell('24h turnover', Fmt.volume(quote.quoteVolume24h)),
-            ]),
+            Row(
+              children: [
+                cell('24h volume', Fmt.volume(quote.volume24h)),
+                cell('24h turnover', Fmt.volume(quote.quoteVolume24h)),
+              ],
+            ),
           ],
         ),
       ),
@@ -300,7 +363,10 @@ class _CandleChart extends StatelessWidget {
         ),
         gridData: FlGridData(
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(color: cs.outlineVariant.withValues(alpha: 0.4), strokeWidth: 0.6),
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: cs.outlineVariant.withValues(alpha: 0.4),
+            strokeWidth: 0.6,
+          ),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -310,14 +376,22 @@ class _CandleChart extends StatelessWidget {
           rightTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 58,
-              getTitlesWidget: (value, meta) => SideTitleWidget(
-                meta: meta,
-                child: Text(
-                  Fmt.price(value),
-                  style: TextStyle(fontSize: 9, color: cs.onSurfaceVariant, fontFamily: 'JetBrainsMono'),
-                ),
-              ),
+              reservedSize: 56,
+              getTitlesWidget: (value, meta) =>
+                  value == meta.min || value == meta.max
+                  ? const SizedBox.shrink()
+                  : SideTitleWidget(
+                      meta: meta,
+                      child: Text(
+                        Fmt.axis(value),
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: cs.onSurfaceVariant,
+                          fontFamily: 'JetBrainsMono',
+                        ),
+                      ),
+                    ),
             ),
           ),
         ),

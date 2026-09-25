@@ -40,6 +40,31 @@ class Fmt {
     return NumberFormat.currency(symbol: '', decimalDigits: digits).format(v).trim();
   }
 
+  /// A delta shown in the precision of the price it belongs to (BTC's
+  /// +322.60, not +322.6000).
+  static String priceChange(double delta, double reference) {
+    final digits = _digitsFor(reference.abs());
+    final f = NumberFormat.currency(symbol: '', decimalDigits: digits).format(delta.abs()).trim();
+    return '${delta >= 0 ? '+' : '-'}$f';
+  }
+
+  /// Chart axis labels: short enough to never wrap.
+  static String axis(double v) {
+    final abs = v.abs();
+    if (abs >= 10000) return NumberFormat('#,##0').format(v);
+    if (abs >= 100) return v.toStringAsFixed(1);
+    if (abs >= 1) return v.toStringAsFixed(3);
+    return v.toStringAsPrecision(3);
+  }
+
+  static int _digitsFor(double abs) => abs >= 1000
+      ? 2
+      : abs >= 1
+          ? 4
+          : abs >= 0.01
+              ? 5
+              : 8;
+
   static String percent(double v) => '${v >= 0 ? '+' : ''}${v.toStringAsFixed(2)}%';
 
   static String signed(double v) =>

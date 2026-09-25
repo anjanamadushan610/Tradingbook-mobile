@@ -19,6 +19,7 @@ class ApiClient {
     required TokenStorage tokenStorage,
     required void Function() onSessionExpired,
     String? baseUrl,
+    @visibleForTesting HttpClientAdapter? adapter,
   }) {
     final options = BaseOptions(
       baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
@@ -29,9 +30,14 @@ class ApiClient {
       responseType: ResponseType.json,
     );
     _dio = Dio(options);
+    final refreshClient = Dio(options);
+    if (adapter != null) {
+      _dio.httpClientAdapter = adapter;
+      refreshClient.httpClientAdapter = adapter;
+    }
     final auth = AuthInterceptor(
       storage: tokenStorage,
-      refreshClient: Dio(options),
+      refreshClient: refreshClient,
       onSessionExpired: onSessionExpired,
     )..client = _dio;
     _dio.interceptors.add(auth);
