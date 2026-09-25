@@ -2,6 +2,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="TradingBook"
+        android:enableOnBackInvokedCallback="true"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
@@ -25,6 +26,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Links to posts, profiles, groups and pages on the web open
+                 in the app (lib/core/router/app_router.dart maps the web
+                 paths). Verification needs tradingbooknet.com to serve
+                 /.well-known/assetlinks.json — see docs/RELEASE.md. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https"/>
+                <data android:host="tradingbooknet.com"/>
+                <data android:host="www.tradingbooknet.com"/>
+                <data android:pathPrefix="/p/"/>
+                <data android:pathPrefix="/profile/"/>
+                <data android:pathPrefix="/groups/"/>
+                <data android:pathPrefix="/channels/"/>
+            </intent-filter>
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="true"/>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

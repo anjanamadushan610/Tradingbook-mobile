@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug builds only: allow http:// so the app can talk to a local
+         `wrangler dev` backend (API_BASE_URL=http://10.0.2.2:8787).
+         Release builds stay HTTPS-only. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // AppColors import is intentionally removed — text styles must NOT bake in
 // static colours. Colour comes from DefaultTextStyle / Theme.of(context).textTheme
@@ -10,109 +9,127 @@ class AppTextStyles {
   AppTextStyles._();
 
   // === Display / Hero ===
-  static TextStyle displayLarge = GoogleFonts.inter(
+  static const TextStyle displayLarge = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 32,
     fontWeight: FontWeight.w800,
     letterSpacing: -0.5,
   );
 
-  static TextStyle displayMedium = GoogleFonts.inter(
+  static const TextStyle displayMedium = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 26,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.3,
   );
 
   // === Headlines ===
-  static TextStyle headlineLarge = GoogleFonts.inter(
+  static const TextStyle headlineLarge = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 22,
     fontWeight: FontWeight.w700,
     letterSpacing: -0.2,
   );
 
-  static TextStyle headlineMedium = GoogleFonts.inter(
+  static const TextStyle headlineMedium = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 18,
     fontWeight: FontWeight.w700,
   );
 
-  static TextStyle headlineSmall = GoogleFonts.inter(
+  static const TextStyle headlineSmall = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 16,
     fontWeight: FontWeight.w600,
   );
 
   // === Title ===
-  static TextStyle titleLarge = GoogleFonts.inter(
+  static const TextStyle titleLarge = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: FontWeight.w600,
   );
 
-  static TextStyle titleMedium = GoogleFonts.inter(
+  static const TextStyle titleMedium = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: FontWeight.w600,
   );
 
-  static TextStyle titleSmall = GoogleFonts.inter(
+  static const TextStyle titleSmall = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 13,
     fontWeight: FontWeight.w600,
   );
 
   // === Body ===
-  static TextStyle bodyLarge = GoogleFonts.inter(
+  static const TextStyle bodyLarge = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: FontWeight.w400,
     height: 1.5,
   );
 
-  static TextStyle bodyMedium = GoogleFonts.inter(
+  static const TextStyle bodyMedium = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.5,
   );
 
   // bodySmall is intentionally muted — use .copyWith(color: ...) to override
-  static TextStyle bodySmall = GoogleFonts.inter(
+  static const TextStyle bodySmall = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 13,
     fontWeight: FontWeight.w400,
   );
 
   // === Label ===
-  static TextStyle labelLarge = GoogleFonts.inter(
+  static const TextStyle labelLarge = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.1,
   );
 
-  static TextStyle labelMedium = GoogleFonts.inter(
+  static const TextStyle labelMedium = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
   );
 
-  static TextStyle labelSmall = GoogleFonts.inter(
+  static const TextStyle labelSmall = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: FontWeight.w500,
     letterSpacing: 0.5,
   );
 
   // === Caption ===
-  static TextStyle caption = GoogleFonts.inter(
+  static const TextStyle caption = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
 
   // === Monospace (for prices / numbers) ===
-  static TextStyle mono = GoogleFonts.jetBrainsMono(
+  static const TextStyle mono = TextStyle(
+    fontFamily: 'JetBrainsMono',
     fontSize: 14,
     fontWeight: FontWeight.w500,
   );
 
-  static TextStyle monoLarge = GoogleFonts.jetBrainsMono(
+  static const TextStyle monoLarge = TextStyle(
+    fontFamily: 'JetBrainsMono',
     fontSize: 22,
     fontWeight: FontWeight.w700,
   );
 
   // === Button ===
   // buttonPrimary colour is always white (on teal bg) — intentionally kept.
-  static TextStyle buttonPrimary = GoogleFonts.inter(
+  static const TextStyle buttonPrimary = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.2,
@@ -120,7 +137,8 @@ class AppTextStyles {
   );
 
   // buttonSecondary colour is always brand teal — intentionally kept.
-  static TextStyle buttonSecondary = GoogleFonts.inter(
+  static const TextStyle buttonSecondary = TextStyle(
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: FontWeight.w600,
     letterSpacing: 0.2,
