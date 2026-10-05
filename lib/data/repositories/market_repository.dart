@@ -20,11 +20,9 @@ class MarketRepository {
     );
     return MarketEnvelope(
       provider: json['provider'] as String? ?? '',
-      fetchedAt: DateTime.fromMillisecondsSinceEpoch(
-        (json['fetchedAt'] as num?)?.toInt() ?? 0,
-      ),
+      fetchedAt: _parseTime(json['fetchedAt']),
       items: (json['items'] as List? ?? const [])
-          .cast<Json>()
+          .whereType<Map<String, dynamic>>()
           .map(Quote.fromJson)
           .toList(),
     );
@@ -41,11 +39,9 @@ class MarketRepository {
     );
     return MarketEnvelope(
       provider: json['provider'] as String? ?? '',
-      fetchedAt: DateTime.fromMillisecondsSinceEpoch(
-        (json['fetchedAt'] as num?)?.toInt() ?? 0,
-      ),
+      fetchedAt: _parseTime(json['fetchedAt']),
       items: (json['items'] as List? ?? const [])
-          .cast<Json>()
+          .whereType<Map<String, dynamic>>()
           .map(Candle.fromJson)
           .toList(),
     );
@@ -56,9 +52,27 @@ class MarketRepository {
     if (_symbols != null) return _symbols!;
     final json = await _api.get<Json>('/api/markets/symbols');
     _symbols = (json['items'] as List? ?? const [])
-        .cast<Json>()
+        .whereType<Map<String, dynamic>>()
         .map(MarketSymbol.fromJson)
         .toList();
     return _symbols!;
   }
+}
+
+/// Safely parses a [fetchedAt] value from either a Unix-epoch int/ms or an
+/// ISO-8601 string. Returns [DateTime.now()] as a safe fallback so the UI
+/// always has a sensible timestamp to display.
+DateTime _parseTime(Object? value) {
+  if (value is num) {
+    final ms = value.toInt();
+    // Epoch-second vs epoch-millisecond heuristic: anything before year 2001
+    // in ms (< 978307200000) is likely seconds.
+    return DateTime.fromMillisecondsSinceEpoch(
+      ms < 978307200000 ? ms * 1000 : ms,
+    );
+  }
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+  return DateTime.now();
 }

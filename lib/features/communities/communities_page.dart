@@ -11,7 +11,7 @@ import '../../core/router/routes.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/models/community.dart';
 import '../../data/repositories/community_repository.dart';
-import '../notifications/notification_bell.dart';
+
 import 'widgets/community_tiles.dart';
 
 /// Groups (discussion communities with their own moderators) and Pages
@@ -39,7 +39,6 @@ class _CommunitiesPageState extends State<CommunitiesPage> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(
         title: const Text('Communities'),
-        actions: const [NotificationBell(), SizedBox(width: 4)],
         bottom: TabBar(controller: _tabs, tabs: const [Tab(text: 'Groups'), Tab(text: 'Pages')]),
       ),
       floatingActionButton: FloatingActionButton.extended(

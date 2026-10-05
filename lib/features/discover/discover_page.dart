@@ -18,7 +18,7 @@ import '../../data/repositories/community_repository.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../communities/widgets/community_tiles.dart';
-import '../notifications/notification_bell.dart';
+
 import '../post/widgets/post_card.dart';
 import '../profile/widgets/follow_button.dart';
 
@@ -64,7 +64,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover'),
-        actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: PagedListView<Post>(
         cubit: _trending,

@@ -13,7 +13,7 @@ import '../../core/utils/formatters.dart';
 import '../../core/widgets/state_views.dart';
 import '../../data/models/market.dart';
 import '../../data/repositories/market_repository.dart';
-import '../notifications/notification_bell.dart';
+
 import 'watchlist_cubit.dart';
 
 /// Live spot crypto quotes: your watchlist plus every listed instrument.
@@ -128,7 +128,6 @@ class _MarketsPageState extends State<MarketsPage> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Markets'),
-        actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: body,
     );
