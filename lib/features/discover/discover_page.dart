@@ -13,6 +13,7 @@ import '../../core/router/routes.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/state_views.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../data/models/community.dart';
 import '../../data/models/post.dart';
 import '../../data/models/user.dart';
@@ -174,6 +175,55 @@ class _TopicsRail extends StatelessWidget {
     return FutureBuilder<Paginated<TrendingTopic>>(
       future: future,
       builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Trending topics', icon: Icons.tag_rounded),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 4,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) => Shimmer.fromColors(
+                    baseColor: base,
+                    highlightColor: highlight,
+                    child: Container(
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Trending topics', icon: Icons.tag_rounded),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load trending topics', style: AppTextStyles.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
         final topics = snap.data?.items ?? const [];
         if (topics.isEmpty) return const SizedBox.shrink();
         return Column(
@@ -221,20 +271,68 @@ class _TradersRailState extends State<_TradersRail> {
     return FutureBuilder<Paginated<UserProfile>>(
       future: widget.future,
       builder: (context, snap) {
-        final traders = snap.data?.items ?? const [];
-        if (snap.connectionState == ConnectionState.done && traders.isEmpty) {
-          return const SizedBox.shrink();
-        }
         final cs = Theme.of(context).colorScheme;
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
+              SizedBox(
+                height: 196,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  itemBuilder: (context, i) => Container(
+                    width: 150,
+                    margin: const EdgeInsets.only(right: 10),
+                    child: Shimmer.fromColors(
+                      baseColor: base,
+                      highlightColor: highlight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: cs.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load traders', style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+        final traders = snap.data?.items ?? const [];
+        if (traders.isEmpty) return const SizedBox.shrink();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
             SizedBox(
               height: 196,
-              child: traders.isEmpty
-                  ? const LoadingView()
-                  : ListView.builder(
+              child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: traders.length,
@@ -309,6 +407,71 @@ class _CommunitiesRail extends StatelessWidget {
     return FutureBuilder<(Paginated<Group>, Paginated<CommunityPage>)>(
       future: future,
       builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionTitle(
+                'Communities',
+                icon: Icons.groups_rounded,
+                action: TextButton(
+                  onPressed: () => context.go(Routes.communities),
+                  child: const Text('See all'),
+                ),
+              ),
+              SizedBox(
+                height: 162,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  itemBuilder: (context, i) => Container(
+                    width: 168,
+                    margin: const EdgeInsets.only(right: 10),
+                    child: Shimmer.fromColors(
+                      baseColor: base,
+                      highlightColor: highlight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionTitle(
+                'Communities',
+                icon: Icons.groups_rounded,
+                action: TextButton(
+                  onPressed: () => context.go(Routes.communities),
+                  child: const Text('See all'),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load communities', style: AppTextStyles.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
         final groups = snap.data?.$1.items ?? const <Group>[];
         final pages = snap.data?.$2.items ?? const <CommunityPage>[];
         if (groups.isEmpty && pages.isEmpty) return const SizedBox.shrink();

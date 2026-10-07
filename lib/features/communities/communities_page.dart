@@ -9,6 +9,7 @@ import '../../core/paging/paged_cubit.dart';
 import '../../core/paging/paged_list_view.dart';
 import '../../core/router/routes.dart';
 import '../../core/widgets/state_views.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../data/models/community.dart';
 import '../../data/repositories/community_repository.dart';
 
@@ -41,14 +42,41 @@ class _CommunitiesPageState extends State<CommunitiesPage> with SingleTickerProv
         title: const Text('Communities'),
         bottom: TabBar(controller: _tabs, tabs: const [Tab(text: 'Groups'), Tab(text: 'Pages')]),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => context.push(_tabs.index == 0 ? Routes.createGroup : Routes.createPage),
-        icon: const Icon(Icons.add_rounded),
-        label: AnimatedBuilder(
-          animation: _tabs,
-          builder: (_, _) => Text(_tabs.index == 0 ? 'New group' : 'New page'),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryGradient,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(30),
+            onTap: () => context.push(_tabs.index == 0 ? Routes.createGroup : Routes.createPage),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_rounded, color: Colors.white),
+                  const SizedBox(width: 8),
+                  AnimatedBuilder(
+                    animation: _tabs,
+                    builder: (_, _) => Text(
+                      _tabs.index == 0 ? 'New group' : 'New page',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: TabBarView(controller: _tabs, children: const [_GroupsTab(), _PagesTab()]),
@@ -217,7 +245,20 @@ class _MineSection<T> extends StatelessWidget {
             children: [
               _Header(title),
               if (snap.connectionState != ConnectionState.done)
-                const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator())
+                ...List.generate(3, (index) {
+                  final dark = Theme.of(context).brightness == Brightness.dark;
+                  final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+                  final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+                  return Shimmer.fromColors(
+                    baseColor: base,
+                    highlightColor: highlight,
+                    child: ListTile(
+                      leading: Container(width: 48, height: 48, color: Colors.white),
+                      title: Container(width: 150, height: 16, color: Colors.white),
+                      subtitle: Container(width: 100, height: 12, color: Colors.white),
+                    ),
+                  );
+                })
               else if (snap.hasError)
                 ErrorView(error: snap.error, compact: true)
               else if (snap.data!.items.isEmpty)
@@ -244,7 +285,11 @@ class _Header extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
         child: Text(
           text,
-          style: AppTextStyles.headlineSmall.copyWith(color: Theme.of(context).colorScheme.onSurface),
+          style: AppTextStyles.headlineSmall.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            letterSpacing: -0.3,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
 }
