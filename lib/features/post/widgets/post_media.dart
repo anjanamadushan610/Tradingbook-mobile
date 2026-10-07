@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/media_urls.dart';
@@ -45,63 +47,83 @@ class _PostMediaState extends State<PostMedia> {
 
     final width = MediaQuery.sizeOf(context).width;
     final cacheWidth = (width * MediaQuery.devicePixelRatioOf(context)).round();
-    return AspectRatio(
-      aspectRatio: 4 / 3,
-      child: Stack(
-        children: [
-          PageView.builder(
-            itemCount: refs.length,
-            onPageChanged: (i) => setState(() => _index = i),
-            itemBuilder: (context, i) => GestureDetector(
-              onTap: () => openImageViewer(context, refs, i),
-              child: NetImage(
-                url: MediaUrls.image(refs[i]),
-                fallbackUrl: MediaUrls.original(refs[i]),
-                fit: BoxFit.cover,
-                memCacheWidth: cacheWidth,
+    // ClipRRect with top-only radius so the image blends into the card top corners.
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      child: AspectRatio(
+        aspectRatio: 4 / 3,
+        child: Stack(
+          children: [
+            PageView.builder(
+              itemCount: refs.length,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemBuilder: (context, i) => GestureDetector(
+                onTap: () => openImageViewer(context, refs, i),
+                child: NetImage(
+                  url: MediaUrls.image(refs[i]),
+                  fallbackUrl: MediaUrls.original(refs[i]),
+                  fit: BoxFit.cover,
+                  memCacheWidth: cacheWidth,
+                ),
               ),
             ),
-          ),
-          if (refs.length > 1) ...[
-            Positioned(
-              top: 10,
-              right: 10,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
+            if (refs.length > 1) ...[
+              Positioned(
+                top: 10,
+                right: 10,
+                // ── Glassmorphism count pill ──────────────────────────────
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${_index + 1}/${refs.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 8,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var i = 0; i < refs.length; i++)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: i == _index ? 16 : 6,
-                      height: 6,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: i == _index ? Colors.white : Colors.white.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(3),
-                        boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.3), blurRadius: 2)],
+                        color: Colors.black.withValues(alpha: 0.30),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        '${_index + 1}/${refs.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
                       ),
                     ),
-                ],
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                bottom: 8,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var i = 0; i < refs.length; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: i == _index ? 16 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: i == _index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.3), blurRadius: 2)],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

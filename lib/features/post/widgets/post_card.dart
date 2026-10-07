@@ -50,6 +50,9 @@ class _PostCardState extends State<PostCard> {
   late Post _post = widget.post;
   DateTime? _visibleSince;
 
+  // ── Press micro-interaction state ──────────────────────────────────────────
+  bool _pressed = false;
+
   @override
   void initState() {
     super.initState();
@@ -94,56 +97,78 @@ class _PostCardState extends State<PostCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final me = context.select((SessionCubit s) => s.state.userOrNull);
     final isMine = me?.id == _post.authorId;
     final open = widget.tapToOpen ? () => context.push(Routes.post(_post.id)) : null;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border.symmetric(
-          horizontal: BorderSide(color: dark ? AppColors.darkCardBorder : AppColors.cardBorder),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 4, 8),
-            child: Row(
+    return AnimatedScale(
+      scale: _pressed ? 0.98 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        // Individual child widgets handle their own taps; this GestureDetector
+        // is only for the press-scale micro-interaction (no onTap here).
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: dark ? AppColors.darkSurface : AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: dark
+                ? const []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+          ),
+          // ClipRRect ensures PostMedia images respect the 16 px card radius.
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _AuthorHeader(post: _post)),
-                PostMenuButton(
-                  post: _post,
-                  isMine: isMine,
-                  isModerator: me?.isModerator ?? false,
-                  onChanged: _changed,
-                  onDeleted: widget.onDeleted,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 4, 8),
+                  child: Row(
+                    children: [
+                      Expanded(child: _AuthorHeader(post: _post)),
+                      PostMenuButton(
+                        post: _post,
+                        isMine: isMine,
+                        isModerator: me?.isModerator ?? false,
+                        onChanged: _changed,
+                        onDeleted: widget.onDeleted,
+                      ),
+                    ],
+                  ),
                 ),
+                if (widget.showStatus && _post.status != PostStatus.live)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: PostStatusChip(post: _post),
+                  ),
+                if (_post.caption.isNotEmpty)
+                  InkWell(
+                    onTap: open,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: PostCaption(text: _post.caption),
+                    ),
+                  ),
+                PostMedia(post: _post),
+                if (_post.status == PostStatus.live)
+                  PostActions(post: _post, onComment: () => context.push(Routes.post(_post.id, focusComment: true))),
+                if (_post.status != PostStatus.live) const SizedBox(height: 8),
               ],
             ),
           ),
-          if (widget.showStatus && _post.status != PostStatus.live)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: PostStatusChip(post: _post),
-            ),
-          if (_post.caption.isNotEmpty)
-            InkWell(
-              onTap: open,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: PostCaption(text: _post.caption),
-              ),
-            ),
-          PostMedia(post: _post),
-          if (_post.status == PostStatus.live)
-            PostActions(post: _post, onComment: () => context.push(Routes.post(_post.id, focusComment: true))),
-          if (_post.status != PostStatus.live) const SizedBox(height: 8),
-        ],
+        ),
       ),
     );
   }
@@ -157,61 +182,98 @@ class _AuthorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
+    if (post.isCommunityPost) {
+      final name = (post.authorName != null && post.authorName!.trim().isNotEmpty) 
+          ? post.authorName! 
+          : 'Community Member';
+      return _buildContent(context, cs, name, post.authorAvatarUrl);
+    }
+
     return UserBuilder(
       userId: post.authorId,
       builder: (context, user) {
-        final name = user?.displayName ?? post.authorName ?? 'Trader';
-        return InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () => context.push(Routes.user(post.authorId)),
-          child: Row(
-            children: [
-              AppAvatar(url: user?.avatarUrl, name: name, size: 40),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        final cand1 = (post.authorName != null && post.authorName!.trim().isNotEmpty) ? post.authorName! : null;
+        final cand2 = (user?.displayName != null && user!.displayName.trim().isNotEmpty) ? user.displayName : null;
+        
+        String rawName = cand1 ?? cand2 ?? '';
+        // Never display raw email addresses in the UI
+        if (rawName.contains('@')) {
+          rawName = '';
+        }
+        final name = rawName.isNotEmpty ? rawName : 'Trader';
+
+        return _buildContent(context, cs, name, post.authorAvatarUrl ?? user?.avatarUrl);
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ColorScheme cs, String name, String? avatarUrl) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        if (post.pageId != null) {
+          context.push(Routes.page(post.pageId!));
+        } else if (post.groupId != null) {
+          context.push(Routes.group(post.groupId!));
+        } else {
+          context.push(Routes.user(post.authorId));
+        }
+      },
+      child: Row(
+        children: [
+          AppAvatar(url: avatarUrl, name: name, size: 40),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // Figma: tight tracking on author name for premium feel
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: cs.onSurface,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Row(
                   children: [
                     Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface),
+                      Fmt.relative(post.createdAt),
+                      // Figma: slightly open tracking on timestamp for legibility
+                      style: AppTextStyles.caption.copyWith(
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                    const SizedBox(height: 1),
-                    Row(
-                      children: [
-                        Text(
-                          Fmt.relative(post.createdAt),
-                          style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          switch (post.visibility) {
-                            PostVisibility.public => Icons.public_rounded,
-                            PostVisibility.followersOnly => Icons.group_outlined,
-                            PostVisibility.private => Icons.lock_outline_rounded,
-                          },
-                          size: 13,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        if (post.groupId != null || post.pageId != null) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            post.groupId != null ? Icons.groups_2_outlined : Icons.flag_outlined,
-                            size: 13,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ],
-                      ],
+                    const SizedBox(width: 4),
+                    Icon(
+                      switch (post.visibility) {
+                        PostVisibility.public => Icons.public_rounded,
+                        PostVisibility.followersOnly => Icons.group_outlined,
+                        PostVisibility.private => Icons.lock_outline_rounded,
+                      },
+                      size: 13,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.75),
                     ),
+                    if (post.groupId != null || post.pageId != null) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        post.groupId != null ? Icons.groups_2_outlined : Icons.flag_outlined,
+                        size: 13,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+                      ),
+                    ],
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

@@ -41,6 +41,7 @@ class _FeedPageState extends State<FeedPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.feedBackground,
       appBar: AppBar(
         titleSpacing: 16,
         title: GestureDetector(

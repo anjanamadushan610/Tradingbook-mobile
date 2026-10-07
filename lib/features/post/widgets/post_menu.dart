@@ -114,9 +114,9 @@ class PostMenuButton extends StatelessWidget {
           children: [
             for (final v in PostVisibility.values)
               ListTile(
-                leading: Icon(visibilityIcon(v)),
-                title: Text(v.label),
-                subtitle: Text(visibilityHint(v)),
+                leading: Icon(visibilityIcon(v), color: Theme.of(context).colorScheme.onSurfaceVariant),
+                title: Text(v.label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                subtitle: Text(visibilityHint(v), style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 trailing: v == current ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
                 onTap: () => Navigator.pop(ctx, v),
               ),
@@ -165,10 +165,11 @@ class _MenuSheetState extends State<_MenuSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final post = widget.post;
     Widget item(String id, IconData icon, String label, {bool danger = false}) => ListTile(
-          leading: Icon(icon, color: danger ? AppColors.error : null),
-          title: Text(label, style: danger ? const TextStyle(color: AppColors.error) : null),
+          leading: Icon(icon, color: danger ? AppColors.error : cs.onSurfaceVariant),
+          title: Text(label, style: danger ? const TextStyle(color: AppColors.error) : TextStyle(color: cs.onSurface)),
           onTap: () => Navigator.pop(context, id),
         );
     return SafeArea(

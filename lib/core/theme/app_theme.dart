@@ -36,7 +36,7 @@ abstract class AppTheme {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFFBFCFD),
+          fillColor: AppColors.inputFieldBg,
           contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -79,6 +79,11 @@ abstract class AppTheme {
         ),
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
+        listTileTheme: const ListTileThemeData(
+          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
+          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400),
+          iconColor: AppColors.textSecondary,
+        ),
       );
 
   // ─── Dark ───────────────────────────────────────────────────────────────────
@@ -154,5 +159,10 @@ abstract class AppTheme {
         ),
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
+        listTileTheme: const ListTileThemeData(
+          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
+          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400),
+          iconColor: AppColors.darkTextSecondary,
+        ),
       );
 }

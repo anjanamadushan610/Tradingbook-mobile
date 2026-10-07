@@ -10,9 +10,12 @@ class AppColors {
   static const Color primarySurface = Color(0xFFE8F7F9);
 
   // === Background & Surface ===
-  static const Color background = Color(0xFFF2F5F8);
-  static const Color surface = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF6FBFD);   // Figma: Feed Page Background
+  static const Color feedBackground = Color(0xFFF6FBFD); // alias for clarity
+  static const Color surface = Color(0xFFFFFFFF);       // Figma: Card/Post BG
   static const Color surfaceVariant = Color(0xFFF8FAFB);
+  static const Color inputFieldBg = Color(0xFFFBFCFD);  // Figma: Input Fields BG
+  static const Color commentBackground = Color(0xFFF6FAFD); // Figma: Comment BG
   static const Color cardBorder = Color(0xFFE5EAF0);
 
   // === Dark Mode ===
@@ -29,7 +32,7 @@ class AppColors {
   static const Color postTextLight = Color(0xFFD9D9D9);
 
   // === Profile ===
-  static const Color profileFeedBackground = Color(0xFFF6FBFD);
+  static const Color profileFeedBackground = Color(0xFFF6FBFD); // same as feedBackground
 
   // === Dark Text ===
   static const Color darkTextPrimary = Color(0xFFE6EDF3);

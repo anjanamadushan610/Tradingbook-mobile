@@ -30,38 +30,39 @@ class SettingsPage extends StatelessWidget {
     final user = context.select((SessionCubit s) => s.state.userOrNull);
     final theme = context.watch<ThemeCubit>().state;
     if (user == null) return const Scaffold();
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text('Settings', style: AppTextStyles.headlineSmall.copyWith(color: cs.onSurface))),
       body: ListView(
         children: [
           const _Group('Account'),
           ListTile(
             leading: const Icon(Icons.mail_outline_rounded),
-            title: const Text('Email'),
-            subtitle: Text(user.email ?? '—'),
+            title: Text('Email', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
+            subtitle: Text(user.email ?? '—', style: AppTextStyles.bodySmall.copyWith(color: cs.onSurfaceVariant)),
           ),
           ListTile(
             leading: const Icon(Icons.person_outline_rounded),
-            title: const Text('Edit profile'),
+            title: Text('Edit profile', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.push(Routes.editProfile),
           ),
           if (user.hasPassword)
             ListTile(
               leading: const Icon(Icons.lock_outline_rounded),
-              title: const Text('Change password'),
+              title: Text('Change password', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(Routes.changePassword),
             )
           else
             ListTile(
               leading: const Icon(Icons.verified_user_outlined),
-              title: const Text('Signed in with Google'),
-              subtitle: const Text('Your password is managed by your Google account.'),
+              title: Text('Signed in with Google', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
+              subtitle: Text('Your password is managed by your Google account.', style: AppTextStyles.bodySmall.copyWith(color: cs.onSurfaceVariant)),
             ),
           ListTile(
             leading: const Icon(Icons.block_rounded),
-            title: const Text('Blocked traders'),
+            title: Text('Blocked traders', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.push(Routes.blockedUsers),
           ),
@@ -69,13 +70,13 @@ class SettingsPage extends StatelessWidget {
           const _Group('Content'),
           ListTile(
             leading: const Icon(Icons.article_outlined),
-            title: const Text('Your posts & review status'),
+            title: Text('Your posts & review status', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.push(Routes.myPosts),
           ),
           ListTile(
             leading: const Icon(Icons.bookmark_border_rounded),
-            title: const Text('Saved posts'),
+            title: Text('Saved posts', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () => context.push(Routes.bookmarks),
           ),
@@ -98,19 +99,19 @@ class SettingsPage extends StatelessWidget {
             const _Group('Moderation'),
             ListTile(
               leading: const Icon(Icons.gavel_rounded),
-              title: const Text('Review queue'),
+              title: Text('Review queue', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(Routes.moderation),
             ),
             ListTile(
               leading: const Icon(Icons.flag_outlined),
-              title: const Text('User reports'),
+              title: Text('User reports', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(Routes.moderationReports),
             ),
             ListTile(
               leading: const Icon(Icons.history_rounded),
-              title: const Text('Audit log'),
+              title: Text('Audit log', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => context.push(Routes.moderationAudit),
             ),
@@ -119,28 +120,28 @@ class SettingsPage extends StatelessWidget {
           const _Group('About'),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('Privacy policy'),
+            title: Text('Privacy policy', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.open_in_new_rounded, size: 18),
             onTap: () => launchUrl(Uri.parse(AppConfig.privacyPolicyUrl), mode: LaunchMode.inAppBrowserView),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),
-            title: const Text('Terms of service'),
+            title: Text('Terms of service', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
             trailing: const Icon(Icons.open_in_new_rounded, size: 18),
             onTap: () => launchUrl(Uri.parse(AppConfig.termsUrl), mode: LaunchMode.inAppBrowserView),
           ),
           ListTile(
             leading: const Icon(Icons.support_agent_rounded),
-            title: const Text('Contact support'),
-            subtitle: const Text(AppConfig.supportEmail),
+            title: Text('Contact support', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
+            subtitle: Text(AppConfig.supportEmail, style: AppTextStyles.bodySmall.copyWith(color: cs.onSurfaceVariant)),
             onTap: () => launchUrl(Uri.parse('mailto:${AppConfig.supportEmail}?subject=TradingBook%20app%20support')),
           ),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (context, snap) => ListTile(
               leading: const Icon(Icons.info_outline_rounded),
-              title: const Text('Open-source licenses'),
-              subtitle: snap.hasData ? Text('Version ${snap.data!.version} (${snap.data!.buildNumber})') : null,
+              title: Text('Open-source licenses', style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
+              subtitle: snap.hasData ? Text('Version ${snap.data!.version} (${snap.data!.buildNumber})', style: AppTextStyles.bodySmall.copyWith(color: cs.onSurfaceVariant)) : null,
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: 'TradingBook',

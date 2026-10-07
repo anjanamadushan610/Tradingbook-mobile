@@ -68,6 +68,10 @@ class _GroupsTabState extends State<_GroupsTab> with AutomaticKeepAliveClientMix
   late Future<Paginated<Group>> _mine = _repo.myGroups(limit: 50);
   late final _discover = PagedCubit<Group>((c) => _repo.discoverGroups(cursor: c), keyOf: (g) => g.id);
 
+  /// IDs of groups the user joined this session — keeps cards visible in the
+  /// discover list even after the API starts excluding already-joined groups.
+  final _joinedIds = <String>{};
+
   @override
   bool get wantKeepAlive => true;
 
@@ -95,7 +99,21 @@ class _GroupsTabState extends State<_GroupsTab> with AutomaticKeepAliveClientMix
         ),
         const SliverToBoxAdapter(child: _Header('Discover groups')),
       ],
-      itemBuilder: (_, g, _) => GroupTile(group: g),
+      itemBuilder: (_, g, _) => GroupTile(
+        group: g,
+        trailing: _joinedIds.contains(g.id)
+            ? const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary)
+            : null,
+        onTap: () async {
+          await context.push(Routes.group(g.id));
+          // After returning from detail, check if user joined this group
+          // and mark it locally so it stays visible in the discover list.
+          final membership = await _repo.membership(g.id).catchError((_) => GroupMembership.none);
+          if (membership != GroupMembership.none && mounted) {
+            setState(() => _joinedIds.add(g.id));
+          }
+        },
+      ),
       empty: const EmptyView(
         icon: Icons.groups_outlined,
         title: 'No groups to discover',
@@ -116,6 +134,10 @@ class _PagesTabState extends State<_PagesTab> with AutomaticKeepAliveClientMixin
   final _repo = sl<CommunityRepository>();
   late Future<Paginated<CommunityPage>> _mine = _repo.myPages();
   late final _discover = PagedCubit<CommunityPage>((c) => _repo.discoverPages(cursor: c), keyOf: (p) => p.id);
+
+  /// IDs of pages the user followed this session — keeps cards visible in the
+  /// discover list even after the API starts excluding already-followed pages.
+  final _followedIds = <String>{};
 
   @override
   bool get wantKeepAlive => true;
@@ -144,7 +166,21 @@ class _PagesTabState extends State<_PagesTab> with AutomaticKeepAliveClientMixin
         ),
         const SliverToBoxAdapter(child: _Header('Discover pages')),
       ],
-      itemBuilder: (_, p, _) => PageTile(page: p),
+      itemBuilder: (_, p, _) => PageTile(
+        page: p,
+        trailing: _followedIds.contains(p.id)
+            ? const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary)
+            : null,
+        onTap: () async {
+          await context.push(Routes.page(p.id));
+          // After returning from detail, check if the user followed this page
+          // and mark it locally so it stays visible in the discover list.
+          final isNowFollowing = await _repo.isFollowingPage(p.id).catchError((_) => false);
+          if (isNowFollowing && mounted) {
+            setState(() => _followedIds.add(p.id));
+          }
+        },
+      ),
       empty: const EmptyView(
         icon: Icons.flag_outlined,
         title: 'No pages to discover',
