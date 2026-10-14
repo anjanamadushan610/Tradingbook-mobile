@@ -37,7 +37,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _saving = false;
   String? _uploading;
 
-  static const _languageOptions = {'en': 'English', 'si': 'Sinhala', 'ta': 'Tamil', 'hi': 'Hindi', 'ar': 'Arabic', 'es': 'Spanish'};
+  static const _languageOptions = {
+    'en': 'English',
+    'si': 'Sinhala',
+    'ta': 'Tamil',
+    'hi': 'Hindi',
+    'bn': 'Bengali',
+    'ur': 'Urdu',
+    'ar': 'Arabic',
+    'es': 'Spanish',
+  };
   static const _interestSuggestions = [
     'Crypto', 'Forex', 'Stocks', 'Gold', 'Indices', 'Options', 'Day Trading',
     'Swing Trading', 'Technical Analysis', 'Fundamental Analysis', 'Macro', 'Scalping',
