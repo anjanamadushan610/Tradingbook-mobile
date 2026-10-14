@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +13,7 @@ import '../../core/router/routes.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/app_avatar.dart';
 import '../../core/widgets/state_views.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../data/models/community.dart';
 import '../../data/models/post.dart';
 import '../../data/models/user.dart';
@@ -18,7 +21,7 @@ import '../../data/repositories/community_repository.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../communities/widgets/community_tiles.dart';
-import '../notifications/notification_bell.dart';
+
 import '../post/widgets/post_card.dart';
 import '../profile/widgets/follow_button.dart';
 
@@ -64,7 +67,6 @@ class _DiscoverPageState extends State<DiscoverPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover'),
-        actions: const [NotificationBell(), SizedBox(width: 4)],
       ),
       body: PagedListView<Post>(
         cubit: _trending,
@@ -100,20 +102,33 @@ class _SearchField extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => context.push(Routes.search()),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
-              const SizedBox(width: 10),
-              Text('Search traders, posts and #tags',
-                  style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurfaceVariant)),
-            ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                color: AppColors.inputFieldBg.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 10),
+                  Text('Search traders, posts and #tags',
+                      style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurfaceVariant)),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -137,7 +152,12 @@ class _SectionTitle extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: AppColors.primary),
           const SizedBox(width: 8),
-          Expanded(child: Text(title, style: AppTextStyles.headlineSmall.copyWith(color: cs.onSurface))),
+          Expanded(
+              child: Text(title,
+                  style: AppTextStyles.headlineSmall.copyWith(
+                      color: cs.onSurface,
+                      letterSpacing: -0.3,
+                      fontWeight: FontWeight.bold))),
           ?action,
         ],
       ),
@@ -155,6 +175,55 @@ class _TopicsRail extends StatelessWidget {
     return FutureBuilder<Paginated<TrendingTopic>>(
       future: future,
       builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Trending topics', icon: Icons.tag_rounded),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 4,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) => Shimmer.fromColors(
+                    baseColor: base,
+                    highlightColor: highlight,
+                    child: Container(
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Trending topics', icon: Icons.tag_rounded),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load trending topics', style: AppTextStyles.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
         final topics = snap.data?.items ?? const [];
         if (topics.isEmpty) return const SizedBox.shrink();
         return Column(
@@ -169,7 +238,10 @@ class _TopicsRail extends StatelessWidget {
                 itemCount: topics.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (context, i) => ActionChip(
-                  label: Text('${topics[i].label} · ${Fmt.count(topics[i].postCount)}'),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+                  label: Text('${topics[i].label} · ${Fmt.count(topics[i].postCount)}',
+                      style: const TextStyle(fontWeight: FontWeight.w500)),
                   onPressed: () => context.push(Routes.search('#${topics[i].tag}')),
                 ),
               ),
@@ -181,30 +253,86 @@ class _TopicsRail extends StatelessWidget {
   }
 }
 
-class _TradersRail extends StatelessWidget {
+class _TradersRail extends StatefulWidget {
   const _TradersRail({required this.future});
 
   final Future<Paginated<UserProfile>> future;
 
   @override
+  State<_TradersRail> createState() => _TradersRailState();
+}
+
+class _TradersRailState extends State<_TradersRail> {
+  /// IDs that were followed this session — keeps cards visible after follow.
+  final _followed = <String>{};
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Paginated<UserProfile>>(
-      future: future,
+      future: widget.future,
       builder: (context, snap) {
-        final traders = snap.data?.items ?? const [];
-        if (snap.connectionState == ConnectionState.done && traders.isEmpty) {
-          return const SizedBox.shrink();
-        }
         final cs = Theme.of(context).colorScheme;
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
+              SizedBox(
+                height: 196,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  itemBuilder: (context, i) => Container(
+                    width: 150,
+                    margin: const EdgeInsets.only(right: 10),
+                    child: Shimmer.fromColors(
+                      baseColor: base,
+                      highlightColor: highlight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: cs.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load traders', style: AppTextStyles.bodyMedium.copyWith(color: cs.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+        final traders = snap.data?.items ?? const [];
+        if (traders.isEmpty) return const SizedBox.shrink();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const _SectionTitle('Traders to follow', icon: Icons.person_search_rounded),
             SizedBox(
               height: 196,
-              child: traders.isEmpty
-                  ? const LoadingView()
-                  : ListView.builder(
+              child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: traders.length,
@@ -212,28 +340,48 @@ class _TradersRail extends StatelessWidget {
                         final t = traders[i];
                         return SizedBox(
                           width: 150,
-                          child: Card(
+                          child: Container(
                             margin: const EdgeInsets.only(right: 10),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () => context.push(Routes.user(t.id)),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  children: [
-                                    AppAvatar(url: t.avatarUrl, name: t.displayName, size: 56),
-                                    const SizedBox(height: 8),
-                                    Text(t.displayName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
-                                    Text(
-                                      '${Fmt.count(t.followerCount ?? 0)} followers',
-                                      style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
-                                    ),
-                                    const Spacer(),
-                                    FollowButton(userId: t.id, initial: false),
-                                  ],
+                            decoration: BoxDecoration(
+                              color: cs.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () => context.push(Routes.user(t.id)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    children: [
+                                      AppAvatar(url: t.avatarUrl, name: t.displayName, size: 56),
+                                      const SizedBox(height: 8),
+                                      Text(t.displayName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTextStyles.titleMedium.copyWith(color: cs.onSurface)),
+                                      Text(
+                                        '${Fmt.count(t.followerCount ?? 0)} followers',
+                                        style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
+                                      ),
+                                      const Spacer(),
+                                      FollowButton(
+                                        userId: t.id,
+                                        initial: _followed.contains(t.id) ? true : false,
+                                        onChanged: (following) {
+                                          if (following) setState(() => _followed.add(t.id));
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -259,6 +407,71 @@ class _CommunitiesRail extends StatelessWidget {
     return FutureBuilder<(Paginated<Group>, Paginated<CommunityPage>)>(
       future: future,
       builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          final dark = Theme.of(context).brightness == Brightness.dark;
+          final base = dark ? AppColors.darkSurfaceVariant : const Color(0xFFE8ECF0);
+          final highlight = dark ? AppColors.darkCardBorder : const Color(0xFFF6F8FA);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionTitle(
+                'Communities',
+                icon: Icons.groups_rounded,
+                action: TextButton(
+                  onPressed: () => context.go(Routes.communities),
+                  child: const Text('See all'),
+                ),
+              ),
+              SizedBox(
+                height: 162,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  itemBuilder: (context, i) => Container(
+                    width: 168,
+                    margin: const EdgeInsets.only(right: 10),
+                    child: Shimmer.fromColors(
+                      baseColor: base,
+                      highlightColor: highlight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        if (snap.hasError) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionTitle(
+                'Communities',
+                icon: Icons.groups_rounded,
+                action: TextButton(
+                  onPressed: () => context.go(Routes.communities),
+                  child: const Text('See all'),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline_rounded, size: 16, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 8),
+                    Text('Failed to load communities', style: AppTextStyles.bodyMedium.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
         final groups = snap.data?.$1.items ?? const <Group>[];
         final pages = snap.data?.$2.items ?? const <CommunityPage>[];
         if (groups.isEmpty && pages.isEmpty) return const SizedBox.shrink();

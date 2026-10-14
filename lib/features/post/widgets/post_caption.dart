@@ -47,7 +47,11 @@ class _PostCaptionState extends State<PostCaption> {
     }
     _recognizers.clear();
 
-    final base = AppTextStyles.bodyLarge.copyWith(color: cs.onSurface, height: 1.45);
+    final base = AppTextStyles.bodyLarge.copyWith(
+      color: cs.onSurface,
+      height: 1.45,
+      letterSpacing: -0.1, // Figma: tighter tracking for post body readability
+    );
     final tagStyle = base.copyWith(
       color: dark ? AppColors.primaryLight : AppColors.primary,
       fontWeight: FontWeight.w600,

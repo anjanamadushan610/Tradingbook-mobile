@@ -31,6 +31,15 @@ class CommunityRepository {
     return Paginated.fromJson(json, Group.fromJson);
   }
 
+  /// Public groups whose name contains [query].
+  Future<Paginated<Group>> searchGroups(String query, {String? cursor}) async {
+    final json = await _api.get<Json>(
+      '/api/groups/search',
+      query: {'q': query, 'cursor': cursor, 'limit': 20},
+    );
+    return Paginated.fromJson(json, Group.fromJson);
+  }
+
   Future<Group> group(String groupId) async =>
       Group.fromJson(await _api.get<Json>('/api/groups/$groupId'));
 
@@ -79,7 +88,12 @@ class CommunityRepository {
 
   Future<void> deleteGroup(String groupId) => _api.delete<Json>('/api/groups/$groupId');
 
-  Future<void> joinGroup(String groupId) => _api.post<Json>('/api/groups/$groupId/join');
+  /// Join a public group, or ask to join a private one: "joined",
+  /// "requested" or "already_member".
+  Future<String> joinGroup(String groupId) async {
+    final json = await _api.post<Json>('/api/groups/$groupId/join');
+    return json['status'] as String? ?? 'joined';
+  }
 
   Future<void> leaveGroup(String groupId) => _api.post<Json>('/api/groups/$groupId/leave');
 
@@ -176,6 +190,15 @@ class CommunityRepository {
       query: {'cursor': cursor, 'limit': 20},
     );
     return Paginated.fromJson(json, Post.fromJson);
+  }
+
+  /// Pages whose name contains [query].
+  Future<Paginated<CommunityPage>> searchPages(String query, {String? cursor}) async {
+    final json = await _api.get<Json>(
+      '/api/pages/search',
+      query: {'q': query, 'cursor': cursor, 'limit': 20},
+    );
+    return Paginated.fromJson(json, CommunityPage.fromJson);
   }
 
   Future<bool> isFollowingPage(String pageId) async {

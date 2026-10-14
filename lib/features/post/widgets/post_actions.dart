@@ -37,14 +37,16 @@ class PostActions extends StatelessWidget {
         final dark = Theme.of(context).brightness == Brightness.dark;
         final accent = dark ? AppColors.primaryLight : AppColors.primary;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          // Slightly more breathing room on the action bar vs old padding
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: Row(
             children: [
-              _Action(
-                icon: s.hasLiked ? Icons.thumb_up_alt_rounded : Icons.thumb_up_alt_outlined,
-                label: s.likeCount > 0 ? Fmt.count(s.likeCount) : 'Like',
-                color: s.hasLiked ? accent : cs.onSurfaceVariant,
-                semantics: s.hasLiked ? 'Unlike' : 'Like',
+              // ── Like button with bounce animation on activation ─────────
+              _LikeAction(
+                hasLiked: s.hasLiked,
+                likeCount: s.likeCount,
+                accent: accent,
+                onSurfaceVariant: cs.onSurfaceVariant,
                 onTap: () async {
                   try {
                     await repo.toggleLike(post.id);
@@ -99,6 +101,90 @@ class PostActions extends StatelessWidget {
 
   static String _excerpt(String text) =>
       text.length <= 140 ? text : '${text.substring(0, 140).trimRight()}…';
+}
+
+/// Like action button with a bounce animation on the candle icon when the user
+/// transitions from un-liked → liked. Uses an [AnimationController] +
+/// [TweenSequence] (1.0 → 1.4 → 1.0) for a satisfying spring pop.
+class _LikeAction extends StatefulWidget {
+  const _LikeAction({
+    required this.hasLiked,
+    required this.likeCount,
+    required this.accent,
+    required this.onSurfaceVariant,
+    required this.onTap,
+  });
+
+  final bool hasLiked;
+  final int likeCount;
+  final Color accent;
+  final Color onSurfaceVariant;
+  final VoidCallback onTap;
+
+  @override
+  State<_LikeAction> createState() => _LikeActionState();
+}
+
+class _LikeActionState extends State<_LikeAction> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  );
+
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 40),
+    TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 60),
+  ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+  @override
+  void didUpdateWidget(_LikeAction old) {
+    super.didUpdateWidget(old);
+    // Fire bounce only when transitioning to liked; reset quietly on unlike.
+    if (!old.hasLiked && widget.hasLiked) {
+      _ctrl.forward(from: 0);
+    } else if (old.hasLiked && !widget.hasLiked) {
+      _ctrl.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.hasLiked ? widget.accent : widget.onSurfaceVariant;
+    final icon = widget.hasLiked ? Icons.candlestick_chart : Icons.candlestick_chart_outlined;
+    final label = widget.likeCount > 0 ? Fmt.count(widget.likeCount) : 'Like';
+
+    return Semantics(
+      button: true,
+      label: widget.hasLiked ? 'Unlike' : 'Like',
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          // Slightly wider horizontal padding for breathing room
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              AnimatedBuilder(
+                animation: _scale,
+                builder: (_, _) => Transform.scale(
+                  scale: _scale.value,
+                  child: Icon(icon, size: 20, color: color),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(label, style: AppTextStyles.titleSmall.copyWith(color: color)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Action extends StatelessWidget {

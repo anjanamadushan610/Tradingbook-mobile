@@ -31,6 +31,7 @@ import '../../features/post/compose_page.dart';
 import '../../features/post/post_detail_page.dart';
 import '../../features/profile/connections_page.dart';
 import '../../features/profile/edit_profile_page.dart';
+import '../../features/profile/menu_page.dart';
 import '../../features/profile/my_posts_page.dart';
 import '../../features/profile/my_profile_page.dart';
 import '../../features/profile/user_profile_page.dart';
@@ -85,7 +86,7 @@ GoRouter createRouter(SessionCubit session) {
             GoRoute(path: Routes.home, builder: (_, _) => const FeedPage()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.discover, builder: (_, _) => const DiscoverPage()),
+            GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.markets, builder: (_, _) => const MarketsPage()),
@@ -97,12 +98,13 @@ GoRouter createRouter(SessionCubit session) {
             ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.me, builder: (_, _) => const MyProfilePage()),
+            GoRoute(path: Routes.menu, builder: (_, _) => const MenuPage()),
           ]),
         ],
       ),
 
       // ── full-screen routes ──
+      GoRoute(path: Routes.me, builder: (_, _) => const MyProfilePage()),
       GoRoute(
         path: '/compose',
         pageBuilder: (_, s) => MaterialPage(
@@ -139,7 +141,7 @@ GoRouter createRouter(SessionCubit session) {
         path: '/search',
         builder: (_, s) => SearchPage(initialQuery: s.uri.queryParameters['q'] ?? ''),
       ),
-      GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsPage()),
+      GoRoute(path: Routes.discover, builder: (_, _) => const DiscoverPage()),
       GoRoute(path: Routes.bookmarks, builder: (_, _) => const BookmarksPage()),
 
       GoRoute(path: Routes.createGroup, builder: (_, _) => const GroupFormPage()),

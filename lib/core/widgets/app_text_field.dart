@@ -104,8 +104,10 @@ class _AppTextFieldState extends State<AppTextField> {
                 ? IconButton(
                     tooltip: _obscure ? 'Show password' : 'Hide password',
                     onPressed: () => setState(() => _obscure = !_obscure),
+                    // The icon shows the current state (QA mobile BUG 01/03):
+                    // crossed eye while hidden, open eye while visible.
                     icon: Icon(
-                      _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       size: 20,
                       color: cs.onSurfaceVariant,
                     ),

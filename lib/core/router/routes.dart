@@ -19,6 +19,7 @@ class Routes {
   static const discover = '/discover';
   static const markets = '/markets';
   static const communities = '/communities';
+  static const menu = '/menu';
   static const me = '/me';
 
   // content

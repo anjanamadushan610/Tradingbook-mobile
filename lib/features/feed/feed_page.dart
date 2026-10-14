@@ -14,7 +14,7 @@ import '../../data/models/post.dart';
 import '../../data/repositories/engagement_repository.dart';
 import '../../data/repositories/post_repository.dart';
 import '../auth/session_cubit.dart';
-import '../notifications/notification_bell.dart';
+
 import '../post/widgets/post_card.dart';
 
 class FeedPage extends StatefulWidget {
@@ -41,6 +41,7 @@ class _FeedPageState extends State<FeedPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.feedBackground,
       appBar: AppBar(
         titleSpacing: 16,
         title: GestureDetector(
@@ -68,8 +69,6 @@ class _FeedPageState extends State<FeedPage> {
             onPressed: () => context.push(Routes.search()),
             icon: const Icon(Icons.search_rounded),
           ),
-          const NotificationBell(),
-          const SizedBox(width: 4),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -93,8 +92,9 @@ class _FeedPageState extends State<FeedPage> {
           icon: Icons.dynamic_feed_rounded,
           title: 'Your feed is quiet',
           message: 'Follow traders, pages and groups to fill it with setups and ideas.',
-          actionLabel: 'Discover traders',
-          onAction: () => context.go(Routes.discover),
+          actionLabel: 'Find traders to follow',
+          // A scrollable list with Follow on every row (QA mobile Suggestion 01).
+          onAction: () => context.go('${Routes.communities}?tab=traders'),
         ),
       ),
     );

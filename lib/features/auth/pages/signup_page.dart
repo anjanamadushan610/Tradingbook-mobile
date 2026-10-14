@@ -30,6 +30,7 @@ class _SignupPageState extends State<SignupPage> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
   bool _accepted = false;
   bool _busy = false;
 
@@ -38,6 +39,7 @@ class _SignupPageState extends State<SignupPage> {
     _name.dispose();
     _email.dispose();
     _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
@@ -113,9 +115,25 @@ class _SignupPageState extends State<SignupPage> {
               controller: _password,
               prefixIcon: Icons.lock_outline_rounded,
               isPassword: true,
-              textInputAction: TextInputAction.done,
+              textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.newPassword],
               validator: Validators.newPassword,
+            ),
+            const SizedBox(height: 8),
+            AppTextField(
+              label: 'Confirm password',
+              hint: 'Type it again',
+              controller: _confirm,
+              prefixIcon: Icons.lock_outline_rounded,
+              isPassword: true,
+              textInputAction: TextInputAction.done,
+              autofillHints: const [AutofillHints.newPassword],
+              validator: (v) => (v ?? '').isEmpty
+                  ? 'Please confirm your password'
+                  : v != _password.text
+                      ? 'Passwords do not match'
+                      : null,
+              onSubmitted: (_) => _submit(),
             ),
             const SizedBox(height: 12),
             Row(

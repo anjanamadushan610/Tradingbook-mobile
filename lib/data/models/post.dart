@@ -102,6 +102,7 @@ class Post extends Equatable {
     this.likeCount,
     this.commentCount,
     this.authorName,
+    this.authorAvatarUrl,
   });
 
   final String id;
@@ -123,8 +124,9 @@ class Post extends Equatable {
   final int? likeCount;
   final int? commentCount;
 
-  /// Only the moderation queue sends this.
+  /// Provided by feed for Pages/Groups, or the moderation queue for users.
   final String? authorName;
+  final String? authorAvatarUrl;
 
   bool get isCommunityPost => groupId != null || pageId != null;
 
@@ -150,7 +152,18 @@ class Post extends Equatable {
       likeCount: json['likeCount'] == null ? null : readInt(json['likeCount']),
       commentCount:
           json['commentCount'] == null ? null : readInt(json['commentCount']),
-      authorName: readNullableString(json['authorName']),
+      authorName: readNullableString(json['authorName'] ?? 
+          (json['page'] as Map<String, dynamic>?)?['name'] ?? 
+          (json['group'] as Map<String, dynamic>?)?['name'] ?? 
+          json['pageName'] ?? 
+          json['groupName']),
+      authorAvatarUrl: readNullableString(json['authorAvatarUrl'] ?? 
+          (json['page'] as Map<String, dynamic>?)?['avatarUrl'] ?? 
+          (json['group'] as Map<String, dynamic>?)?['avatarUrl'] ?? 
+          json['pageAvatarUrl'] ?? 
+          json['groupAvatarUrl'] ?? 
+          (json['page'] as Map<String, dynamic>?)?['coverUrl'] ?? 
+          (json['group'] as Map<String, dynamic>?)?['coverUrl']),
     );
   }
 
@@ -171,6 +184,7 @@ class Post extends Equatable {
         likeCount: likeCount,
         commentCount: commentCount,
         authorName: authorName,
+        authorAvatarUrl: authorAvatarUrl,
       );
 
   @override
