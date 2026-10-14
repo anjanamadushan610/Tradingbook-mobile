@@ -92,8 +92,9 @@ class _FeedPageState extends State<FeedPage> {
           icon: Icons.dynamic_feed_rounded,
           title: 'Your feed is quiet',
           message: 'Follow traders, pages and groups to fill it with setups and ideas.',
-          actionLabel: 'Discover traders',
-          onAction: () => context.push(Routes.discover),
+          actionLabel: 'Find traders to follow',
+          // A scrollable list with Follow on every row (QA mobile Suggestion 01).
+          onAction: () => context.go('${Routes.communities}?tab=traders'),
         ),
       ),
     );
