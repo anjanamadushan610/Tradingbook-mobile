@@ -80,8 +80,10 @@ abstract class AppTheme {
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
         listTileTheme: const ListTileThemeData(
-          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
-          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400),
+          // Explicit colours: a theme text style without one renders white,
+          // which hid ListTile/SwitchListTile labels in the light theme.
+          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
           iconColor: AppColors.textSecondary,
         ),
       );
@@ -160,8 +162,8 @@ abstract class AppTheme {
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
         listTileTheme: const ListTileThemeData(
-          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500),
-          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400),
+          titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.darkTextPrimary),
+          subtitleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.darkTextSecondary),
           iconColor: AppColors.darkTextSecondary,
         ),
       );

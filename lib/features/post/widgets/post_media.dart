@@ -1,31 +1,23 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../core/utils/media_urls.dart';
 import '../../../core/widgets/net_image.dart';
 import '../../../data/models/post.dart';
 
-/// Image carousel (1–10 images) or the video placeholder. Tapping an image
-/// opens the zoomable full-screen viewer.
-class PostMedia extends StatefulWidget {
+/// A single image, a collage (2, 3, or 2×2 with a "+N" tile for more), or the
+/// video placeholder. Tapping an image opens the zoomable full-screen viewer
+/// at that image, where every image can be swiped.
+class PostMedia extends StatelessWidget {
   const PostMedia({super.key, required this.post});
 
   final Post post;
 
-  @override
-  State<PostMedia> createState() => _PostMediaState();
-}
-
-class _PostMediaState extends State<PostMedia> {
-  int _index = 0;
+  static const _gap = 2.0;
 
   @override
   Widget build(BuildContext context) {
-    final post = widget.post;
     final refs = post.mediaRefs.where((r) => r != 'pending').toList();
     if (refs.isEmpty) return const SizedBox.shrink();
-    final cs = Theme.of(context).colorScheme;
 
     if (post.type == PostType.video) {
       return AspectRatio(
@@ -46,84 +38,95 @@ class _PostMediaState extends State<PostMedia> {
     }
 
     final width = MediaQuery.sizeOf(context).width;
-    final cacheWidth = (width * MediaQuery.devicePixelRatioOf(context)).round();
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    Widget tile(int i, {double share = 1, int more = 0}) => _Tile(
+          ref: refs[i],
+          cacheWidth: (width * share * dpr).round(),
+          more: more,
+          onTap: () => openImageViewer(context, refs, i),
+        );
+
     // ClipRRect with top-only radius so the image blends into the card top corners.
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-      child: AspectRatio(
-        aspectRatio: 4 / 3,
-        child: Stack(
-          children: [
-            PageView.builder(
-              itemCount: refs.length,
-              onPageChanged: (i) => setState(() => _index = i),
-              itemBuilder: (context, i) => GestureDetector(
-                onTap: () => openImageViewer(context, refs, i),
-                child: NetImage(
-                  url: MediaUrls.image(refs[i]),
-                  fallbackUrl: MediaUrls.original(refs[i]),
-                  fit: BoxFit.cover,
-                  memCacheWidth: cacheWidth,
-                ),
+      child: switch (refs.length) {
+        1 => AspectRatio(aspectRatio: 4 / 3, child: tile(0)),
+        2 => AspectRatio(
+            aspectRatio: 4 / 3,
+            child: _row([tile(0, share: .5), tile(1, share: .5)]),
+          ),
+        3 => AspectRatio(
+            aspectRatio: 1,
+            child: _row([
+              tile(0, share: .5),
+              _column([tile(1, share: .5), tile(2, share: .5)]),
+            ]),
+          ),
+        _ => AspectRatio(
+            aspectRatio: 1,
+            child: _column([
+              _row([tile(0, share: .5), tile(1, share: .5)]),
+              _row([tile(2, share: .5), tile(3, share: .5, more: refs.length - 4)]),
+            ]),
+          ),
+      },
+    );
+  }
+
+  static Widget _row(List<Widget> children) => Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: _gap),
+            Expanded(child: children[i]),
+          ],
+        ],
+      );
+
+  static Widget _column(List<Widget> children) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(height: _gap),
+            Expanded(child: children[i]),
+          ],
+        ],
+      );
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({required this.ref, required this.cacheWidth, required this.onTap, this.more = 0});
+
+  final String ref;
+  final int cacheWidth;
+  final VoidCallback onTap;
+
+  /// Images beyond the four shown; drawn as a "+N" overlay when > 0.
+  final int more;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          NetImage(
+            url: MediaUrls.image(ref),
+            fallbackUrl: MediaUrls.original(ref),
+            fit: BoxFit.cover,
+            memCacheWidth: cacheWidth,
+          ),
+          if (more > 0)
+            Container(
+              color: Colors.black.withValues(alpha: 0.5),
+              alignment: Alignment.center,
+              child: Text(
+                '+$more',
+                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700),
               ),
             ),
-            if (refs.length > 1) ...[
-              Positioned(
-                top: 10,
-                right: 10,
-                // ── Glassmorphism count pill ──────────────────────────────
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.30),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 0.5,
-                        ),
-                      ),
-                      child: Text(
-                        '${_index + 1}/${refs.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 8,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var i = 0; i < refs.length; i++)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        width: i == _index ? 16 : 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: i == _index ? Colors.white : Colors.white.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(3),
-                          boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.3), blurRadius: 2)],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+        ],
       ),
     );
   }

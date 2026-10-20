@@ -137,4 +137,44 @@ void main() {
       expect(Validators.email('nope'), isNotNull);
     });
   });
+
+  group('community identity (QA mobile round 1)', () {
+    test('a group post carries postedAsGroup; default is the author', () {
+      final asGroup = Post.fromJson({
+        'postId': 'p1',
+        'authorId': 'u1',
+        'type': 'text',
+        'caption': 'hi',
+        'groupId': 'g1',
+        'postedAsGroup': true,
+        'createdAt': 1700000000000,
+      });
+      expect(asGroup.postedAsGroup, isTrue);
+      expect(asGroup.copyWith(caption: 'x').postedAsGroup, isTrue);
+      final personal = Post.fromJson({'postId': 'p2', 'authorId': 'u1', 'groupId': 'g1', 'createdAt': 1});
+      expect(personal.postedAsGroup, isFalse);
+    });
+
+    test('group membership exposes a pending invitation', () {
+      final m = GroupMembership.fromJson({'isMember': false, 'role': null, 'invited': true});
+      expect(m.invited, isTrue);
+      expect(GroupMembership.fromJson({'isMember': true, 'role': 'owner'}).invited, isFalse);
+    });
+
+    test('groups show their owner unless turned off', () {
+      final base = {'id': 'g1', 'name': 'G', 'ownerId': 'u1', 'createdAt': 1};
+      expect(Group.fromJson(base).showOwner, isTrue);
+      expect(Group.fromJson({...base, 'showOwner': false}).showOwner, isFalse);
+    });
+
+    test('reads a group invitation', () {
+      final i = GroupInvite.fromJson({
+        'group': {'id': 'g1', 'name': 'Gold desk', 'ownerId': 'u1', 'createdAt': 1},
+        'invitedBy': 'u1',
+        'invitedAt': 1700000000000,
+      });
+      expect(i.group.name, 'Gold desk');
+      expect(i.invitedBy, 'u1');
+    });
+  });
 }

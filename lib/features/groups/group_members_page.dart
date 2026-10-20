@@ -55,12 +55,27 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
 
   bool get _canManage => _myRole?.canManage ?? false;
 
+  /// Sends an invitation; the person joins only if they accept (QA mobile
+  /// BUG 22). Someone who already asked to join is approved instead.
   Future<void> _invite() async {
-    final user = await pickUser(context, title: 'Add a member');
+    final user = await pickUser(context, title: 'Invite to the group');
     if (user == null || !mounted) return;
-    final ok = await guard(context, () => _repo.inviteMember(widget.groupId, user.id),
-        success: '${user.displayName} added');
-    if (ok) _members.refresh();
+    try {
+      final outcome = await _repo.inviteMember(widget.groupId, user.id);
+      if (!mounted) return;
+      Toast.show(context, switch (outcome) {
+        InviteOutcome.added => '${user.displayName} asked to join, so they\'re in.',
+        InviteOutcome.invited => 'Invitation sent. ${user.displayName} joins once they accept.',
+        InviteOutcome.alreadyInvited => '${user.displayName} already has an invitation.',
+        InviteOutcome.alreadyMember => '${user.displayName} is already a member.',
+      });
+      if (outcome == InviteOutcome.added) {
+        _members.refresh();
+        setState(() => _requests = _repo.joinRequests(widget.groupId));
+      }
+    } catch (e) {
+      if (mounted) Toast.error(context, e);
+    }
   }
 
   Future<void> _manage(GroupMember m) async {
@@ -93,7 +108,7 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
     if (action == null || !mounted) return;
     if (action == 'remove') {
       final ok = await confirmDialog(context,
-          title: 'Remove member?', message: 'They can rejoin a public group, or be re-added.',
+          title: 'Remove member?', message: 'They can rejoin a public group, or be invited again.',
           confirmLabel: 'Remove', destructive: true);
       if (!ok || !mounted) return;
       final done = await guard(context, () => _repo.removeMember(widget.groupId, m.userId), success: 'Removed');
@@ -117,7 +132,7 @@ class _GroupMembersPageState extends State<GroupMembersPage> {
         title: const Text('Members'),
         actions: [
           if (_canManage)
-            IconButton(tooltip: 'Add member', onPressed: _invite, icon: const Icon(Icons.person_add_alt_1_rounded)),
+            IconButton(tooltip: 'Invite member', onPressed: _invite, icon: const Icon(Icons.person_add_alt_1_rounded)),
         ],
       ),
       body: PagedListView<GroupMember>(

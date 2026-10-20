@@ -13,6 +13,29 @@ class CommunityRepository {
 
   final ApiClient _api;
 
+  // Post headers resolve their group/page identity through these, so a feed
+  // of posts from one community costs one request, not one per card.
+  final _groupCache = <String, Future<Group?>>{};
+  final _pageCache = <String, Future<CommunityPage?>>{};
+
+  /// [group] memoised for this session; `null` when it can't be read.
+  Future<Group?> cachedGroup(String groupId) => _groupCache.putIfAbsent(
+        groupId,
+        () => group(groupId).then<Group?>((g) => g, onError: (_) {
+          _groupCache.remove(groupId);
+          return null;
+        }),
+      );
+
+  /// [page] memoised for this session; `null` when it can't be read.
+  Future<CommunityPage?> cachedPage(String pageId) => _pageCache.putIfAbsent(
+        pageId,
+        () => page(pageId).then<CommunityPage?>((p) => p, onError: (_) {
+          _pageCache.remove(pageId);
+          return null;
+        }),
+      );
+
   // ─── Groups ────────────────────────────────────────────────────────────────
 
   Future<Paginated<Group>> myGroups({String? cursor, int limit = 30}) async {
@@ -72,12 +95,15 @@ class CommunityRepository {
     String? name,
     String? description,
     bool? isPrivate,
+    bool? showOwner,
   }) async {
     final json = await _api.put<Json>('/api/groups/$groupId', body: {
       'name': ?name?.trim(),
       'description': ?description?.trim(),
       if (isPrivate != null) 'visibility': isPrivate ? 'private' : 'public',
+      'showOwner': ?showOwner,
     });
+    _groupCache.remove(groupId);
     return Group.fromJson(json);
   }
 
@@ -105,8 +131,33 @@ class CommunityRepository {
     return Paginated.fromJson(json, GroupMember.fromJson);
   }
 
-  Future<void> inviteMember(String groupId, String userId) =>
-      _api.post<Json>('/api/groups/$groupId/invite', body: {'userId': userId});
+  /// Admins: approves [userId]'s pending request, or sends them an invitation
+  /// they must accept — nobody joins a group without consenting.
+  Future<InviteOutcome> inviteMember(String groupId, String userId) async {
+    final json = await _api.post<Json>('/api/groups/$groupId/invite', body: {'userId': userId});
+    return switch (json['status']) {
+      'added' => InviteOutcome.added,
+      'already_invited' => InviteOutcome.alreadyInvited,
+      'already_member' => InviteOutcome.alreadyMember,
+      _ => InviteOutcome.invited,
+    };
+  }
+
+  /// The signed-in user's pending group invitations.
+  Future<Paginated<GroupInvite>> myGroupInvites({String? cursor}) async {
+    try {
+      final json = await _api.get<Json>('/api/groups/invites', query: {'cursor': cursor, 'limit': 50});
+      return Paginated.fromJson(json, GroupInvite.fromJson);
+    } on ApiException catch (e) {
+      // Older backend: no invitations to show.
+      if (e.isNotFound) return Paginated.empty();
+      rethrow;
+    }
+  }
+
+  Future<void> acceptGroupInvite(String groupId) => _api.post<Json>('/api/groups/$groupId/invites/accept');
+
+  Future<void> declineGroupInvite(String groupId) => _api.post<Json>('/api/groups/$groupId/invites/decline');
 
   Future<void> setMemberRole(String groupId, String userId, GroupRole role) =>
       _api.post<Json>('/api/groups/$groupId/role', body: {'userId': userId, 'role': role.name});
@@ -184,12 +235,36 @@ class CommunityRepository {
   Future<CommunityPage> page(String pageId) async =>
       CommunityPage.fromJson(await _api.get<Json>('/api/pages/$pageId'));
 
-  Future<Paginated<Post>> pageFeed(String pageId, {String? cursor}) async {
+  /// A page's posts; [query] keeps only posts whose caption contains it.
+  Future<Paginated<Post>> pageFeed(String pageId, {String? cursor, String? query}) async {
     final json = await _api.get<Json>(
       '/api/pages/$pageId/feed',
-      query: {'cursor': cursor, 'limit': 20},
+      query: {'cursor': cursor, 'limit': 20, 'q': ?query},
     );
     return Paginated.fromJson(json, Post.fromJson);
+  }
+
+  /// Pages the signed-in user follows, most recently followed first.
+  Future<Paginated<CommunityPage>> followingPages({String? cursor}) async {
+    final json = await _api.get<Json>('/api/pages/following', query: {'cursor': cursor, 'limit': 50});
+    return Paginated.fromJson(json, CommunityPage.fromJson);
+  }
+
+  /// Whether the user follows / has blocked the page.
+  Future<({bool following, bool blocked})> pageRelation(String pageId) async {
+    final json = await _api.get<Json>('/api/pages/$pageId/is-following');
+    return (following: json['following'] == true, blocked: json['blocked'] == true);
+  }
+
+  Future<void> blockPage(String pageId) => _api.post<Json>('/api/pages/$pageId/block');
+
+  Future<void> unblockPage(String pageId) => _api.post<Json>('/api/pages/$pageId/unblock');
+
+  /// Invites [userIds] (max 20) to follow the page; returns how many were
+  /// newly invited (followers and people invited before are skipped).
+  Future<int> invitePageFollowers(String pageId, List<String> userIds) async {
+    final json = await _api.post<Json>('/api/pages/$pageId/invite', body: {'userIds': userIds});
+    return (json['invited'] as num?)?.toInt() ?? 0;
   }
 
   /// Pages whose name contains [query].

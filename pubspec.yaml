@@ -3,7 +3,7 @@ description: TradingBook — the social network for traders.
 publish_to: 'none'
 
 # versionName+versionCode. Bump the code (after +) on every Play upload.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.9.0 <4.0.0'

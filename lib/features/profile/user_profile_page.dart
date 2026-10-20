@@ -51,7 +51,9 @@ class _UserProfilePageState extends State<UserProfilePage>
     final me = context.read<SessionCubit>().user;
     if (me?.id == widget.userId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.go(Routes.me);
+        // Replace this route only: go() would drop the whole stack, so Back
+        // from there left the app (QA mobile BUG 21).
+        if (mounted) context.pushReplacement(Routes.me);
       });
     }
   }

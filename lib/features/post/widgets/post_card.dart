@@ -10,6 +10,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/user_builder.dart';
 import '../../../data/models/post.dart';
+import '../../../data/repositories/community_repository.dart';
 import '../../../data/repositories/engagement_repository.dart';
 import '../../auth/session_cubit.dart';
 import 'post_actions.dart';
@@ -183,11 +184,37 @@ class _AuthorHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    if (post.isCommunityPost) {
-      final name = (post.authorName != null && post.authorName!.trim().isNotEmpty) 
-          ? post.authorName! 
-          : 'Community Member';
-      return _buildContent(context, cs, name, post.authorAvatarUrl);
+    // Page posts always speak as the page; group posts only when an admin
+    // chose "post as group" — otherwise they show the member who wrote them,
+    // as the web does (QA mobile BUGs 24, 25).
+    final repo = sl<CommunityRepository>();
+    if (post.pageId != null) {
+      final pageId = post.pageId!;
+      return FutureBuilder(
+        future: repo.cachedPage(pageId),
+        builder: (context, snap) => _buildContent(
+          context,
+          cs,
+          snap.data?.name ?? _nonEmpty(post.authorName) ?? 'Page',
+          snap.data?.avatarUrl ?? post.authorAvatarUrl,
+          square: true,
+          onTap: () => context.push(Routes.page(pageId)),
+        ),
+      );
+    }
+    if (post.groupId != null && post.postedAsGroup) {
+      final groupId = post.groupId!;
+      return FutureBuilder(
+        future: repo.cachedGroup(groupId),
+        builder: (context, snap) => _buildContent(
+          context,
+          cs,
+          snap.data?.name ?? 'Group',
+          snap.data?.avatarUrl,
+          square: true,
+          onTap: () => context.push(Routes.group(groupId)),
+        ),
+      );
     }
 
     return UserBuilder(
@@ -195,7 +222,7 @@ class _AuthorHeader extends StatelessWidget {
       builder: (context, user) {
         final cand1 = (post.authorName != null && post.authorName!.trim().isNotEmpty) ? post.authorName! : null;
         final cand2 = (user?.displayName != null && user!.displayName.trim().isNotEmpty) ? user.displayName : null;
-        
+
         String rawName = cand1 ?? cand2 ?? '';
         // Never display raw email addresses in the UI
         if (rawName.contains('@')) {
@@ -203,26 +230,33 @@ class _AuthorHeader extends StatelessWidget {
         }
         final name = rawName.isNotEmpty ? rawName : 'Trader';
 
-        return _buildContent(context, cs, name, post.authorAvatarUrl ?? user?.avatarUrl);
+        return _buildContent(
+          context,
+          cs,
+          name,
+          post.authorAvatarUrl ?? user?.avatarUrl,
+          onTap: () => context.push(Routes.user(post.authorId)),
+        );
       },
     );
   }
 
-  Widget _buildContent(BuildContext context, ColorScheme cs, String name, String? avatarUrl) {
+  static String? _nonEmpty(String? s) => s != null && s.trim().isNotEmpty ? s : null;
+
+  Widget _buildContent(
+    BuildContext context,
+    ColorScheme cs,
+    String name,
+    String? avatarUrl, {
+    required VoidCallback onTap,
+    bool square = false,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () {
-        if (post.pageId != null) {
-          context.push(Routes.page(post.pageId!));
-        } else if (post.groupId != null) {
-          context.push(Routes.group(post.groupId!));
-        } else {
-          context.push(Routes.user(post.authorId));
-        }
-      },
+      onTap: onTap,
       child: Row(
         children: [
-          AppAvatar(url: avatarUrl, name: name, size: 40),
+          AppAvatar(url: avatarUrl, name: name, size: 40, square: square),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
