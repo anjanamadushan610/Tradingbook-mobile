@@ -87,8 +87,9 @@ class PostRepository {
       _api.post<Json>('/api/posts/$postId/submit');
 
   /// Group post → group moderators first (stage 1), then the platform.
-  Future<void> submitToGroup(String groupId, String postId) =>
-      _api.post<Json>('/api/groups/$groupId/posts', body: {'postId': postId});
+  /// [asGroup] publishes under the group's identity (group admins+ only).
+  Future<void> submitToGroup(String groupId, String postId, {bool asGroup = false}) =>
+      _api.post<Json>('/api/groups/$groupId/posts', body: {'postId': postId, 'asGroup': asGroup});
 
   /// Page post → platform review (single stage).
   Future<void> submitToPage(String pageId, String postId) =>

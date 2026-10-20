@@ -20,7 +20,8 @@ class AppNotification extends Equatable {
   final String id;
 
   /// post_approved | post_rejected | new_follower | comment | like |
-  /// comment_like | group_join | role_change | page_post
+  /// comment_like | group_join | role_change | page_post |
+  /// group_invite (open the group to accept) | page_invite
   final String type;
   final String actorId;
   final String actorName;

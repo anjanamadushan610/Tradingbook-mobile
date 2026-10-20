@@ -75,6 +75,23 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
     }
   }
 
+  Future<void> _answerInvite(Group g, {required bool accept}) async {
+    setState(() => _busy = true);
+    final ok = await guard(
+      context,
+      () => accept ? _repo.acceptGroupInvite(g.id) : _repo.declineGroupInvite(g.id),
+      success: accept ? 'You joined ${g.name}' : 'Invitation declined',
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!ok) return;
+    if (accept || !g.isPrivate) {
+      _reload();
+    } else {
+      context.pop();
+    }
+  }
+
   Future<void> _leave(Group g) async {
     final ok = await confirmDialog(
       context,
@@ -171,7 +188,19 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
                 child: _GroupHeader(
                   group: group,
                   actions: [
-                    if (!membership.isMember)
+                    if (!membership.isMember && membership.invited) ...[
+                      AppButton.small(
+                        label: 'Accept invitation',
+                        icon: Icons.check_rounded,
+                        isLoading: _busy,
+                        onPressed: () => _answerInvite(group, accept: true),
+                      ),
+                      AppButton.small(
+                        label: 'Decline',
+                        style: AppButtonStyle.subtle,
+                        onPressed: _busy ? null : () => _answerInvite(group, accept: false),
+                      ),
+                    ] else if (!membership.isMember)
                       AppButton.small(
                         label: _requested || group.isPrivate ? (_requested ? 'Requested' : 'Request to join') : 'Join',
                         icon: Icons.group_add_rounded,

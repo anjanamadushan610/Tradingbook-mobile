@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,7 @@ import '../../data/models/post.dart';
 import '../../data/repositories/community_repository.dart';
 import '../auth/session_cubit.dart';
 import '../post/widgets/post_card.dart';
+import '../profile/widgets/user_picker_sheet.dart';
 import '../report/report_sheet.dart';
 
 class PageDetailPage extends StatefulWidget {
@@ -39,16 +42,27 @@ class _PageDetailPageState extends State<PageDetailPage> {
   late Future<CommunityPage> _page = _repo.page(widget.pageId);
   late final _feed = PagedCubit<Post>((c) => _repo.pageFeed(widget.pageId, cursor: c), keyOf: (p) => p.id);
   bool? _following;
+  bool _blocked = false;
   PageRole? _myRole;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _repo.isFollowingPage(widget.pageId).then((f) {
-      if (mounted) setState(() => _following = f);
+    _repo.pageRelation(widget.pageId).then((r) {
+      if (mounted) {
+        setState(() {
+          _following = r.following;
+          _blocked = r.blocked;
+        });
+      }
     }).catchError((_) {
-      if (mounted) setState(() => _following = false);
+      // Older backend without block state.
+      _repo.isFollowingPage(widget.pageId).then((f) {
+        if (mounted) setState(() => _following = f);
+      }).catchError((_) {
+        if (mounted) setState(() => _following = false);
+      });
     });
     final me = context.read<SessionCubit>().user?.id;
     _repo.pageRoles(widget.pageId).then((roles) {
@@ -71,7 +85,11 @@ class _PageDetailPageState extends State<PageDetailPage> {
     });
     try {
       was ? await _repo.unfollowPage(widget.pageId) : await _repo.followPage(widget.pageId);
-      setState(() => _page = _repo.page(widget.pageId));
+      // Following lifts a block (the API does the same).
+      setState(() {
+        if (!was) _blocked = false;
+        _page = _repo.page(widget.pageId);
+      });
     } catch (e) {
       if (mounted) {
         setState(() => _following = was);
@@ -88,6 +106,45 @@ class _PageDetailPageState extends State<PageDetailPage> {
         await SharePlus.instance.share(ShareParams(text: '${p.name} on TradingBook\n${AppConfig.channelUrl(p.id)}'));
       case 'report':
         await showReportSheet(context, target: ReportTarget.page, targetId: p.id);
+      case 'search':
+        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _PageSearchPage(page: p)));
+      case 'invite':
+        final user = await pickUser(context, title: 'Invite a trader to follow ${p.name}');
+        if (user == null || !mounted) return;
+        try {
+          final n = await _repo.invitePageFollowers(p.id, [user.id]);
+          if (mounted) {
+            Toast.show(
+              context,
+              n > 0
+                  ? 'Invitation sent to ${user.displayName}.'
+                  : '${user.displayName} already follows or was already invited.',
+            );
+          }
+        } catch (e) {
+          if (mounted) Toast.error(context, e);
+        }
+      case 'block':
+        final ok = await confirmDialog(
+          context,
+          title: 'Block ${p.name}?',
+          message: 'You\'ll stop following it, and its posts won\'t show in your feed, '
+              'discovery or search. You can unblock it from this menu.',
+          confirmLabel: 'Block',
+          destructive: true,
+        );
+        if (!ok || !mounted) return;
+        final done = await guard(context, () => _repo.blockPage(p.id), success: 'Page blocked');
+        if (done && mounted) {
+          setState(() {
+            _blocked = true;
+            _following = false;
+            _page = _repo.page(widget.pageId);
+          });
+        }
+      case 'unblock':
+        final done = await guard(context, () => _repo.unblockPage(p.id), success: 'Page unblocked');
+        if (done && mounted) setState(() => _blocked = false);
       case 'delete':
         final ok = await confirmDialog(
           context,
@@ -125,10 +182,21 @@ class _PageDetailPageState extends State<PageDetailPage> {
             actions: [
               PopupMenuButton<String>(
                 onSelected: (a) => _menu(a, page),
+                // What each role can do here (QA mobile BUG 26): everyone can
+                // search and share; the team and followers can invite; anyone
+                // else can report or block the page.
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'share', child: Text('Share page')),
-                  if (!manager) const PopupMenuItem(value: 'report', child: Text('Report page')),
-                  if (_myRole == PageRole.owner) const PopupMenuItem(value: 'delete', child: Text('Delete page')),
+                  const PopupMenuItem(value: 'search', child: _MenuRow(Icons.search_rounded, 'Search in page')),
+                  const PopupMenuItem(value: 'share', child: _MenuRow(Icons.share_outlined, 'Share page')),
+                  if (manager || _following == true)
+                    const PopupMenuItem(value: 'invite', child: _MenuRow(Icons.person_add_alt_1_outlined, 'Invite traders')),
+                  if (!manager) const PopupMenuItem(value: 'report', child: _MenuRow(Icons.flag_outlined, 'Report page')),
+                  if (!manager)
+                    _blocked
+                        ? const PopupMenuItem(value: 'unblock', child: _MenuRow(Icons.lock_open_rounded, 'Unblock page'))
+                        : const PopupMenuItem(value: 'block', child: _MenuRow(Icons.block_rounded, 'Block page')),
+                  if (_myRole == PageRole.owner)
+                    const PopupMenuItem(value: 'delete', child: _MenuRow(Icons.delete_outline_rounded, 'Delete page')),
                 ],
               ),
             ],
@@ -155,7 +223,7 @@ class _PageDetailPageState extends State<PageDetailPage> {
                   actions: [
                     if (_myRole != PageRole.owner)
                       AppButton.small(
-                        label: _following == true ? 'Following' : 'Follow',
+                        label: _following == true ? 'Following' : (_blocked ? 'Blocked · Follow' : 'Follow'),
                         style: _following == true ? AppButtonStyle.outlined : AppButtonStyle.primary,
                         isLoading: _busy,
                         onPressed: _following == null ? null : _toggleFollow,
@@ -258,6 +326,99 @@ class _PageHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Text(label),
+        ],
+      );
+}
+
+/// "Search in page": the page's posts whose caption contains the query.
+class _PageSearchPage extends StatefulWidget {
+  const _PageSearchPage({required this.page});
+
+  final CommunityPage page;
+
+  @override
+  State<_PageSearchPage> createState() => _PageSearchPageState();
+}
+
+class _PageSearchPageState extends State<_PageSearchPage> {
+  final _repo = sl<CommunityRepository>();
+  final _field = TextEditingController();
+  Timer? _debounce;
+  String _query = '';
+  PagedCubit<Post>? _results;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _field.dispose();
+    _results?.close();
+    super.dispose();
+  }
+
+  void _onChanged(String text) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      final q = text.trim();
+      if (q == _query) return;
+      final old = _results;
+      setState(() {
+        _query = q;
+        _results = q.isEmpty
+            ? null
+            : PagedCubit<Post>((c) => _repo.pageFeed(widget.page.id, cursor: c, query: q), keyOf: (p) => p.id);
+      });
+      old?.close();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final results = _results;
+    return Scaffold(
+      appBar: AppBar(
+        titleSpacing: 0,
+        title: TextField(
+          controller: _field,
+          autofocus: true,
+          onChanged: _onChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Search ${widget.page.name}',
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+          ),
+        ),
+      ),
+      body: results == null
+          ? const EmptyView(icon: Icons.search_rounded, title: 'Search this page', message: 'Find posts by a word in the caption.')
+          : PagedListView<Post>(
+              key: ValueKey(_query),
+              cubit: results,
+              itemBuilder: (_, p, _) => PostCard(key: ValueKey(p.id), post: p, contextType: 'page'),
+              empty: EmptyView(
+                icon: Icons.search_off_rounded,
+                title: 'No matches',
+                message: 'No posts here mention "$_query".',
+              ),
+            ),
     );
   }
 }

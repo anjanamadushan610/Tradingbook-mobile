@@ -96,6 +96,7 @@ class Post extends Equatable {
     this.visibility = PostVisibility.public,
     this.groupId,
     this.pageId,
+    this.postedAsGroup = false,
     required this.createdAt,
     this.updatedAt,
     this.rejectedReason,
@@ -118,6 +119,10 @@ class Post extends Equatable {
   final PostVisibility visibility;
   final String? groupId;
   final String? pageId;
+
+  /// A group post published under the group's name (admins+ may choose
+  /// this); otherwise a group post speaks as its author.
+  final bool postedAsGroup;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? rejectedReason;
@@ -146,6 +151,7 @@ class Post extends Equatable {
       visibility: PostVisibility.fromWire(json['visibility']),
       groupId: readNullableString(json['groupId']),
       pageId: readNullableString(json['pageId']),
+      postedAsGroup: readBool(json['postedAsGroup']),
       createdAt: readTime(json['createdAt']),
       updatedAt: json['updatedAt'] == null ? null : readTime(json['updatedAt']),
       rejectedReason: readNullableString(json['rejectedReason']),
@@ -178,6 +184,7 @@ class Post extends Equatable {
         visibility: visibility ?? this.visibility,
         groupId: groupId,
         pageId: pageId,
+        postedAsGroup: postedAsGroup,
         createdAt: createdAt,
         updatedAt: updatedAt,
         rejectedReason: rejectedReason,

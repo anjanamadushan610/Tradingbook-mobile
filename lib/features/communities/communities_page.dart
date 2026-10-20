@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -10,12 +11,14 @@ import '../../core/network/paginated.dart';
 import '../../core/paging/paged_cubit.dart';
 import '../../core/paging/paged_list_view.dart';
 import '../../core/router/routes.dart';
+import '../../core/widgets/feedback.dart';
 import '../../core/widgets/state_views.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../data/models/community.dart';
 import '../../data/models/user.dart';
 import '../../data/repositories/community_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../auth/session_cubit.dart';
 import '../profile/widgets/user_tile.dart';
 
 import 'widgets/community_actions.dart';
@@ -122,6 +125,7 @@ class _CreateButton extends StatelessWidget {
 /// suggestions) while the box is empty, matches by name while it isn't.
 class _SearchableList<T> extends StatefulWidget {
   const _SearchableList({
+    super.key,
     required this.hint,
     required this.browse,
     required this.search,
@@ -231,12 +235,43 @@ class _GroupsTab extends StatefulWidget {
 
 class _GroupsTabState extends State<_GroupsTab> with AutomaticKeepAliveClientMixin {
   final _repo = sl<CommunityRepository>();
-  late Future<Paginated<Group>> _mine = _repo.myGroups(limit: 50);
+  late Future<Paginated<Group>> _managed;
+  late Future<Paginated<Group>> _joined;
+  late Future<Paginated<GroupInvite>> _invites;
 
   @override
   bool get wantKeepAlive => true;
 
-  void _reloadMine() => setState(() => _mine = _repo.myGroups(limit: 50));
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// Groups the user runs and groups they're a member of, shown apart
+  /// (QA mobile BUG 13); plus invitations waiting for an answer (BUG 22).
+  void _load() {
+    final me = context.read<SessionCubit>().user?.id;
+    final mine = _repo.myGroups(limit: 50);
+    Future<Paginated<Group>> part(bool managed) => mine.then((p) => Paginated(
+          items: p.items.where((g) => (g.ownerId == me) == managed).toList(),
+          nextCursor: null,
+        ));
+    _managed = part(true);
+    _joined = part(false);
+    _invites = _repo.myGroupInvites();
+  }
+
+  void _reloadMine() => setState(_load);
+
+  Future<void> _answerInvite(GroupInvite invite, {required bool accept}) async {
+    final ok = await guard(
+      context,
+      () => accept ? _repo.acceptGroupInvite(invite.group.id) : _repo.declineGroupInvite(invite.group.id),
+      success: accept ? 'You joined ${invite.group.name}' : 'Invitation declined',
+    );
+    if (ok) _reloadMine();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -249,9 +284,55 @@ class _GroupsTabState extends State<_GroupsTab> with AutomaticKeepAliveClientMix
       onRefresh: () async => _reloadMine(),
       browseHeader: [
         SliverToBoxAdapter(
+          child: FutureBuilder<Paginated<GroupInvite>>(
+            future: _invites,
+            builder: (context, snap) {
+              final items = snap.data?.items ?? const <GroupInvite>[];
+              if (items.isEmpty) return const SizedBox.shrink();
+              return Container(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Header('Group invitations (${items.length})'),
+                    for (final i in items)
+                      GroupTile(
+                        group: i.group,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: 'Decline',
+                              icon: const Icon(Icons.close_rounded, color: AppColors.error),
+                              onPressed: () => _answerInvite(i, accept: false),
+                            ),
+                            IconButton(
+                              tooltip: 'Accept',
+                              icon: const Icon(Icons.check_rounded, color: AppColors.success),
+                              onPressed: () => _answerInvite(i, accept: true),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        SliverToBoxAdapter(
           child: _MineSection<Group>(
-            future: _mine,
-            title: 'Your groups',
+            future: _managed,
+            title: 'Groups you manage',
+            emptyText: 'Groups you create show up here.',
+            tile: (g) => GroupTile(group: g),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: _MineSection<Group>(
+            future: _joined,
+            title: 'Joined groups',
             emptyText: 'You haven\'t joined any groups yet.',
             tile: (g) => GroupTile(group: g),
           ),
@@ -282,19 +363,44 @@ class _PagesTab extends StatefulWidget {
 class _PagesTabState extends State<_PagesTab> with AutomaticKeepAliveClientMixin {
   final _repo = sl<CommunityRepository>();
   late Future<Paginated<CommunityPage>> _mine = _repo.myPages();
+  late Future<Paginated<CommunityPage>> _following = _followingOrEmpty();
+
+  /// Bumped to rebuild the discover list (a fresh cubit) after a follow.
+  int _generation = 0;
 
   @override
   bool get wantKeepAlive => true;
+
+  Future<Paginated<CommunityPage>> _followingOrEmpty() =>
+      _repo.followingPages().catchError((_) => Paginated.empty<CommunityPage>());
+
+  void _reload() => setState(() {
+        _mine = _repo.myPages();
+        _following = _followingOrEmpty();
+        _generation++;
+      });
+
+  /// Discover never lists the user's own pages (QA mobile BUG 15). The API
+  /// drops them too; filtering here also covers an older backend.
+  Future<Paginated<CommunityPage>> _discover(String? cursor) async {
+    final (mine, page) = await (
+      _mine.catchError((_) => Paginated.empty<CommunityPage>()),
+      _repo.discoverPages(cursor: cursor),
+    ).wait;
+    final own = {for (final p in mine.items) p.id};
+    return Paginated(items: page.items.where((p) => !own.contains(p.id)).toList(), nextCursor: page.nextCursor);
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return _SearchableList<CommunityPage>(
+      key: ValueKey(_generation),
       hint: 'Search pages',
-      browse: (c) => _repo.discoverPages(cursor: c),
+      browse: _discover,
       search: (q, c) => _repo.searchPages(q, cursor: c),
       keyOf: (p) => p.id,
-      onRefresh: () async => setState(() => _mine = _repo.myPages()),
+      onRefresh: () async => _reload(),
       browseHeader: [
         SliverToBoxAdapter(
           child: _MineSection<CommunityPage>(
@@ -304,12 +410,28 @@ class _PagesTabState extends State<_PagesTab> with AutomaticKeepAliveClientMixin
             tile: (p) => PageTile(page: p),
           ),
         ),
+        // Followed pages leave Discover, so they need a home (QA mobile BUG 14).
+        SliverToBoxAdapter(
+          child: _MineSection<CommunityPage>(
+            future: _following,
+            title: 'Following',
+            emptyText: 'Pages you follow show up here.',
+            tile: (p) => PageTile(
+              page: p,
+              trailing: PageFollowButton(page: p, following: true),
+            ),
+          ),
+        ),
         const SliverToBoxAdapter(child: _Header('Discover pages')),
       ],
       // Discover only lists pages the user doesn't follow; search results may be either.
       itemBuilder: (context, p, {required searching}) => PageTile(
         page: p,
-        trailing: PageFollowButton(page: p, following: searching ? null : false),
+        trailing: PageFollowButton(
+          page: p,
+          following: searching ? null : false,
+          onChanged: (_) => setState(() => _following = _followingOrEmpty()),
+        ),
       ),
       browseEmpty: const EmptyView(
         icon: Icons.flag_outlined,

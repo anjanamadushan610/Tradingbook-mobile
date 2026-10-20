@@ -118,6 +118,8 @@ class _NotificationTile extends StatelessWidget {
         'group_join' => (Icons.groups_rounded, AppColors.warning),
         'role_change' => (Icons.admin_panel_settings_rounded, AppColors.warning),
         'page_post' => (Icons.flag_rounded, AppColors.primary),
+        'group_invite' => (Icons.group_add_rounded, AppColors.primary),
+        'page_invite' => (Icons.flag_rounded, AppColors.primaryLight),
         _ => (Icons.notifications_rounded, AppColors.primary),
       };
 

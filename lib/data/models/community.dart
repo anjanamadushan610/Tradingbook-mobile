@@ -34,6 +34,7 @@ class Group extends Equatable {
     this.coverUrl,
     this.memberCount = 0,
     required this.createdAt,
+    this.showOwner = true,
   });
 
   final String id;
@@ -46,6 +47,9 @@ class Group extends Equatable {
   final int memberCount;
   final DateTime createdAt;
 
+  /// Whether ordinary members see the owner in the members list.
+  final bool showOwner;
+
   factory Group.fromJson(Map<String, dynamic> json) => Group(
         id: readString(json['id']),
         name: readString(json['name'], 'Group'),
@@ -57,11 +61,12 @@ class Group extends Equatable {
         coverUrl: readNullableString(json['coverUrl']),
         memberCount: readInt(json['memberCount']),
         createdAt: readTime(json['createdAt']),
+        showOwner: readBool(json['showOwner'], true),
       );
 
   @override
   List<Object?> get props =>
-      [id, name, description, isPrivate, avatarUrl, coverUrl, memberCount];
+      [id, name, description, isPrivate, avatarUrl, coverUrl, memberCount, showOwner];
 }
 
 class GroupMember extends Equatable {
@@ -86,10 +91,13 @@ class GroupMember extends Equatable {
 }
 
 class GroupMembership extends Equatable {
-  const GroupMembership({required this.isMember, this.role});
+  const GroupMembership({required this.isMember, this.role, this.invited = false});
 
   final bool isMember;
   final GroupRole? role;
+
+  /// A pending invitation the viewer can accept or decline.
+  final bool invited;
 
   static const none = GroupMembership(isMember: false);
 
@@ -97,11 +105,34 @@ class GroupMembership extends Equatable {
       GroupMembership(
         isMember: readBool(json['isMember']),
         role: GroupRole.fromWire(json['role']),
+        invited: readBool(json['invited']),
       );
 
   @override
-  List<Object?> get props => [isMember, role];
+  List<Object?> get props => [isMember, role, invited];
 }
+
+/// An invitation to join a group, waiting for the invitee's answer.
+class GroupInvite extends Equatable {
+  const GroupInvite({required this.group, required this.invitedBy, required this.invitedAt});
+
+  final Group group;
+  final String invitedBy;
+  final DateTime invitedAt;
+
+  factory GroupInvite.fromJson(Map<String, dynamic> json) => GroupInvite(
+        group: Group.fromJson((json['group'] as Map?)?.cast<String, dynamic>() ?? const {}),
+        invitedBy: readString(json['invitedBy']),
+        invitedAt: readTime(json['invitedAt']),
+      );
+
+  @override
+  List<Object?> get props => [group.id, invitedBy];
+}
+
+/// What [CommunityRepository.inviteMember] did: approved a pending request,
+/// or sent an invitation the user still has to accept.
+enum InviteOutcome { added, invited, alreadyInvited, alreadyMember }
 
 enum PageRole {
   owner,

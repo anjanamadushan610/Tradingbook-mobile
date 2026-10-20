@@ -8,7 +8,9 @@ import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/net_image.dart';
 
-/// Cover + avatar editor used by the group and page settings screens.
+/// Cover + avatar editor used by the group and page settings screens, and by
+/// the create forms — there [avatarFile]/[coverFile] preview images picked
+/// before the community exists, and [onRemove] clears one.
 class CommunityImagesEditor extends StatefulWidget {
   const CommunityImagesEditor({
     super.key,
@@ -16,11 +18,17 @@ class CommunityImagesEditor extends StatefulWidget {
     required this.avatarUrl,
     required this.coverUrl,
     required this.upload,
+    this.avatarFile,
+    this.coverFile,
+    this.onRemove,
   });
 
   final String name;
   final String? avatarUrl;
   final String? coverUrl;
+  final File? avatarFile;
+  final File? coverFile;
+  final void Function(String kind)? onRemove;
 
   /// Uploads [file] as `avatar` or `cover`; the caller refreshes its model.
   final Future<void> Function(File file, String kind) upload;
@@ -66,18 +74,26 @@ class _CommunityImagesEditorState extends State<CommunityImagesEditor> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  widget.coverUrl == null
-                      ? Container(decoration: const BoxDecoration(gradient: AppColors.primaryGradient))
-                      : NetImage(url: widget.coverUrl!),
+                  if (widget.coverFile != null)
+                    Image.file(widget.coverFile!, fit: BoxFit.cover, cacheWidth: 1200)
+                  else if (widget.coverUrl != null)
+                    NetImage(url: widget.coverUrl!)
+                  else
+                    Container(decoration: const BoxDecoration(gradient: AppColors.primaryGradient)),
                   Container(color: Colors.black26),
                   Center(
                     child: _busy == 'cover'
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Column(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.photo_camera_outlined, color: Colors.white),
-                            Text('Change cover', style: TextStyle(color: Colors.white)),
+                        : Column(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.photo_camera_outlined, color: Colors.white),
+                            Text(
+                              widget.coverFile == null && widget.coverUrl == null ? 'Add cover image' : 'Change cover',
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           ]),
                   ),
+                  if (widget.coverFile != null && widget.onRemove != null)
+                    Positioned(top: 8, right: 8, child: _RemoveButton(onTap: () => widget.onRemove!('cover'))),
                 ],
               ),
             ),
@@ -88,14 +104,28 @@ class _CommunityImagesEditorState extends State<CommunityImagesEditor> {
             child: GestureDetector(
               onTap: _busy == null ? () => _pick('avatar') : null,
               child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  AppAvatar(
-                    url: widget.avatarUrl,
-                    name: widget.name,
-                    size: 84,
-                    square: true,
-                    borderColor: dark ? AppColors.darkSurface : Colors.white,
-                  ),
+                  if (widget.avatarFile != null)
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: dark ? AppColors.darkSurface : Colors.white, width: 2),
+                        image: DecorationImage(image: FileImage(widget.avatarFile!), fit: BoxFit.cover),
+                      ),
+                    )
+                  else
+                    AppAvatar(
+                      url: widget.avatarUrl,
+                      name: widget.name,
+                      size: 84,
+                      square: true,
+                      borderColor: dark ? AppColors.darkSurface : Colors.white,
+                    ),
+                  if (widget.avatarFile != null && widget.onRemove != null)
+                    Positioned(top: -6, left: -6, child: _RemoveButton(onTap: () => widget.onRemove!('avatar'))),
                   Positioned(
                     right: 0,
                     bottom: 0,
@@ -115,4 +145,24 @@ class _CommunityImagesEditorState extends State<CommunityImagesEditor> {
       ),
     );
   }
+}
+
+class _RemoveButton extends StatelessWidget {
+  const _RemoveButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Remove image',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+            child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+          ),
+        ),
+      );
 }

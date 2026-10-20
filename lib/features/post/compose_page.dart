@@ -55,7 +55,11 @@ class _ComposePageState extends State<ComposePage> {
   final _caption = TextEditingController();
   _Target _target = const _Personal();
   PostVisibility _visibility = PostVisibility.public;
-  String _language = 'en';
+
+  /// Group admins+ may publish under the group's name (the web defaults to
+  /// that too); [_canPostAsGroup] is resolved per target group.
+  bool _asGroup = true;
+  bool _canPostAsGroup = false;
   final List<File> _images = [];
   File? _video;
   String? _step;
@@ -63,7 +67,17 @@ class _ComposePageState extends State<ComposePage> {
   List<Group> _groups = const [];
   List<CommunityPage> _pages = const [];
 
-  static const _languages = {'en': 'English', 'si': 'සිංහල', 'ta': 'தமிழ்'};
+  /// The API still stores a post language (used for feed ranking), so infer
+  /// it from the caption's script instead of asking the user.
+  static String _detectLanguage(String text) {
+    var si = 0, ta = 0;
+    for (final r in text.runes) {
+      if (r >= 0x0D80 && r <= 0x0DFF) si++;
+      if (r >= 0x0B80 && r <= 0x0BFF) ta++;
+    }
+    if (si == 0 && ta == 0) return 'en';
+    return si >= ta ? 'si' : 'ta';
+  }
 
   @override
   void initState() {
@@ -82,7 +96,7 @@ class _ComposePageState extends State<ComposePage> {
         _pages = pages.items;
         if (widget.groupId != null) {
           final g = _groups.where((g) => g.id == widget.groupId).firstOrNull;
-          if (g != null) _target = _ToGroup(g);
+          if (g != null) _setTarget(_ToGroup(g));
         } else if (widget.pageId != null) {
           final p = _pages.where((p) => p.id == widget.pageId).firstOrNull;
           if (p != null) _target = _ToPage(p);
@@ -91,6 +105,17 @@ class _ComposePageState extends State<ComposePage> {
     } catch (_) {
       // Posting personally still works without the lists.
     }
+  }
+
+  void _setTarget(_Target target) {
+    _target = target;
+    _canPostAsGroup = false;
+    if (target is! _ToGroup) return;
+    sl<CommunityRepository>().membership(target.group.id).then((m) {
+      if (mounted && identical(_target, target)) {
+        setState(() => _canPostAsGroup = m.role?.canManage ?? false);
+      }
+    }, onError: (_) {});
   }
 
   @override
@@ -157,7 +182,7 @@ class _ComposePageState extends State<ComposePage> {
         caption: _caption.text,
         // Community posts take their audience from the community.
         visibility: target is _Personal ? _visibility : PostVisibility.public,
-        language: _language,
+        language: _detectLanguage(_caption.text),
         imageCount: _images.length,
       );
       if (type == PostType.image) {
@@ -185,7 +210,7 @@ class _ComposePageState extends State<ComposePage> {
           // Video posts enter review automatically once transcoding finishes.
           if (type != PostType.video) await posts.submitForReview(draft.id);
         case _ToGroup(:final group):
-          await posts.submitToGroup(group.id, draft.id);
+          await posts.submitToGroup(group.id, draft.id, asGroup: _canPostAsGroup && _asGroup);
         case _ToPage(:final page):
           await posts.submitToPage(page.id, draft.id);
       }
@@ -247,7 +272,7 @@ class _ComposePageState extends State<ComposePage> {
         );
       },
     );
-    if (picked != null) setState(() => _target = picked);
+    if (picked != null) setState(() => _setTarget(picked));
   }
 
   @override
@@ -324,11 +349,12 @@ class _ComposePageState extends State<ComposePage> {
                                     label: _visibility.label,
                                     onTap: _busy ? null : _chooseVisibility,
                                   ),
-                                _Chip(
-                                  icon: Icons.translate_rounded,
-                                  label: _languages[_language]!,
-                                  onTap: _busy ? null : _chooseLanguage,
-                                ),
+                                if (_target is _ToGroup && _canPostAsGroup)
+                                  _Chip(
+                                    icon: _asGroup ? Icons.groups_2_outlined : Icons.person_outline_rounded,
+                                    label: _asGroup ? 'As the group' : 'As yourself',
+                                    onTap: _busy ? null : _chooseIdentity,
+                                  ),
                               ],
                             ),
                           ],
@@ -347,7 +373,7 @@ class _ComposePageState extends State<ComposePage> {
                     textCapitalization: TextCapitalization.sentences,
                     style: AppTextStyles.bodyLarge.copyWith(fontSize: 17, color: cs.onSurface),
                     decoration: const InputDecoration(
-                      hintText: 'What\'s your read on the market? Use #tags like #BTC',
+                      hintText: 'What\'s on your mind?',
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -416,38 +442,116 @@ class _ComposePageState extends State<ComposePage> {
     );
   }
 
+  /// Selected images in upload order. Long-press and drag to reorder; the
+  /// position labels (Cover, #2…#4 — the images the feed collage shows) stay
+  /// with the slot, not the image.
   Widget _imageGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _images.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 6,
-        crossAxisSpacing: 6,
-      ),
-      itemBuilder: (_, i) => Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.file(_images[i], fit: BoxFit.cover, cacheWidth: 400),
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_images.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Hold and drag to reorder. The first 4 show in the feed.',
+              style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant),
+            ),
           ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: _busy ? null : () => setState(() => _images.removeAt(i)),
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+        SizedBox(
+          height: 112,
+          child: ReorderableListView.builder(
+            scrollDirection: Axis.horizontal,
+            buildDefaultDragHandles: false,
+            itemCount: _images.length,
+            onReorderItem: (from, to) {
+              if (_busy) return;
+              setState(() => _images.insert(to, _images.removeAt(from)));
+            },
+            itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
+              key: ObjectKey(_images[i]),
+              index: i,
+              enabled: !_busy,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: SizedBox(
+                  width: 112,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(_images[i], fit: BoxFit.cover, cacheWidth: 400),
+                      ),
+                      if (i < 4 && _images.length > 1)
+                        Positioned(
+                          left: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: i == 0 ? AppColors.primary : Colors.black54,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              i == 0 ? 'Cover' : '#${i + 1}',
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: _busy ? null : () => setState(() => _images.removeAt(i)),
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _chooseIdentity() async {
+    final target = _target;
+    if (target is! _ToGroup) return;
+    final me = context.read<SessionCubit>().user;
+    final asGroup = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: AppAvatar(url: target.group.avatarUrl, name: target.group.name, size: 36, square: true),
+              title: Text('Post as ${target.group.name}'),
+              subtitle: const Text('Shows the group\'s name and photo'),
+              trailing: _asGroup ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
+              onTap: () => Navigator.pop(ctx, true),
+            ),
+            ListTile(
+              leading: AppAvatar(url: me?.avatarUrl, name: me?.displayName, size: 36),
+              title: const Text('Post as yourself'),
+              subtitle: const Text('Shows your name and photo'),
+              trailing: !_asGroup ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
+              onTap: () => Navigator.pop(ctx, false),
+            ),
+          ],
+        ),
       ),
     );
+    if (asGroup != null) setState(() => _asGroup = asGroup);
   }
 
   Future<void> _chooseVisibility() async {
@@ -473,26 +577,6 @@ class _ComposePageState extends State<ComposePage> {
     if (v != null) setState(() => _visibility = v);
   }
 
-  Future<void> _chooseLanguage() async {
-    final l = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final e in _languages.entries)
-              ListTile(
-                title: Text(e.value),
-                trailing: e.key == _language ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
-                onTap: () => Navigator.pop(ctx, e.key),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (l != null) setState(() => _language = l);
-  }
 }
 
 class _Chip extends StatelessWidget {
