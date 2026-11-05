@@ -130,12 +130,41 @@ class _ComposePageState extends State<ComposePage> {
       !_busy && (_caption.text.trim().isNotEmpty) && _caption.text.length <= 5000;
 
   Future<void> _pickImages() async {
+    final remaining = AppConfig.maxPostImages - _images.length;
+    if (remaining <= 0) {
+      if (mounted) {
+        Toast.show(
+          context,
+          'Maximum of ${AppConfig.maxPostImages} images reached.',
+          error: true,
+        );
+      }
+      return;
+    }
+
     try {
-      final files = await ImagePrep.pickMany(limit: 10 - _images.length);
-      if (files.isEmpty) return;
+      final picker = ImagePicker();
+      final picked = await picker.pickMultiImage(limit: remaining);
+      if (picked.isEmpty) return;
+
+      List<XFile> toProcess = picked;
+      if (picked.length > remaining) {
+        if (mounted) {
+          Toast.show(
+            context,
+            'Maximum ${AppConfig.maxPostImages} images allowed. Only the first $remaining were added.',
+            error: false,
+          );
+        }
+        toProcess = picked.take(remaining).toList();
+      }
+
+      final files = await ImagePrep.prepareAll(toProcess);
+      if (files.isEmpty || !mounted) return;
+
       setState(() {
         _video = null;
-        _images.addAll(files.take(10 - _images.length));
+        _images.addAll(files);
       });
     } catch (e) {
       if (mounted) Toast.show(context, 'Couldn\'t open your photos.', error: true);
@@ -143,9 +172,20 @@ class _ComposePageState extends State<ComposePage> {
   }
 
   Future<void> _takePhoto() async {
+    if (_images.length >= AppConfig.maxPostImages) {
+      if (mounted) {
+        Toast.show(
+          context,
+          'Maximum of ${AppConfig.maxPostImages} images reached.',
+          error: true,
+        );
+      }
+      return;
+    }
+
     try {
       final file = await ImagePrep.pickOne(source: ImageSource.camera);
-      if (file == null || _images.length >= 10) return;
+      if (file == null || !mounted || _images.length >= AppConfig.maxPostImages) return;
       setState(() {
         _video = null;
         _images.add(file);
@@ -411,12 +451,12 @@ class _ComposePageState extends State<ComposePage> {
                   children: [
                     IconButton(
                       tooltip: 'Add photos',
-                      onPressed: _busy || _images.length >= 10 ? null : _pickImages,
+                      onPressed: _busy || _images.length >= AppConfig.maxPostImages ? null : _pickImages,
                       icon: const Icon(Icons.photo_library_outlined, color: AppColors.bullish),
                     ),
                     IconButton(
                       tooltip: 'Take photo',
-                      onPressed: _busy || _images.length >= 10 ? null : _takePhoto,
+                      onPressed: _busy || _images.length >= AppConfig.maxPostImages ? null : _takePhoto,
                       icon: const Icon(Icons.photo_camera_outlined, color: AppColors.info),
                     ),
                     if (AppConfig.videoUploadsEnabled && _target is! _ToGroup)
@@ -427,7 +467,7 @@ class _ComposePageState extends State<ComposePage> {
                       ),
                     const Spacer(),
                     if (_images.isNotEmpty)
-                      Text('${_images.length}/10', style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant)),
+                      Text('${_images.length}/${AppConfig.maxPostImages}', style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant)),
                     const SizedBox(width: 8),
                     if (_step != null)
                       Text(_step!, style: AppTextStyles.caption.copyWith(color: cs.onSurfaceVariant)),

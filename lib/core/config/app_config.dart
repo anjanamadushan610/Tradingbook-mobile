@@ -13,6 +13,9 @@ class AppConfig {
     defaultValue: 'https://api.tradingbooknet.com',
   );
 
+  /// Maximum number of photos allowed in a single post.
+  static const int maxPostImages = 10;
+
   /// Public R2 domain. Post `mediaRefs` are raw object keys, not URLs — the
   /// client builds the URL (mirrors the backend's MEDIA_PUBLIC_BASE_URL and
   /// the web app's NEXT_PUBLIC_MEDIA_BASE_URL; keep all three in sync).

@@ -4,6 +4,8 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../config/app_config.dart';
+
 /// Picking and preparing images for upload.
 ///
 /// Every image leaves the device as a JPEG, downscaled and with EXIF removed:
@@ -17,9 +19,9 @@ class ImagePrep {
 
   static final _picker = ImagePicker();
 
-  static Future<List<File>> pickMany({int limit = 10}) async {
+  static Future<List<File>> pickMany({int limit = AppConfig.maxPostImages}) async {
     final picked = await _picker.pickMultiImage(limit: limit);
-    return _prepareAll(picked.take(limit).toList());
+    return prepareAll(picked.take(limit).toList());
   }
 
   static Future<File?> pickOne({ImageSource source = ImageSource.gallery, int maxSide = 2048}) async {
@@ -28,7 +30,7 @@ class ImagePrep {
     return prepare(picked, maxSide: maxSide);
   }
 
-  static Future<List<File>> _prepareAll(List<XFile> files) async {
+  static Future<List<File>> prepareAll(List<XFile> files) async {
     final out = <File>[];
     for (final f in files) {
       out.add(await prepare(f));

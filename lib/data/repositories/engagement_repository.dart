@@ -165,6 +165,7 @@ class EngagementRepository {
     required String postId,
     required String body,
     String? parentCommentId,
+    String? imageUrl,
   }) async {
     final json = await _api.post<Json>(
       '/api/engagement/comments',
@@ -172,6 +173,7 @@ class EngagementRepository {
         'postId': postId,
         'body': body.trim(),
         'parentCommentId': ?parentCommentId,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       },
     );
     _bumpComments(postId, 1);

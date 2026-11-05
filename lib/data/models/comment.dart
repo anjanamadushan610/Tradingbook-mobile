@@ -13,6 +13,7 @@ class Comment extends Equatable {
     this.isDeleted = false,
     this.likeCount = 0,
     this.hasLiked = false,
+    this.imageUrl,
   });
 
   final String id;
@@ -24,6 +25,10 @@ class Comment extends Equatable {
   final bool isDeleted;
   final int likeCount;
   final bool hasLiked;
+
+  /// Optional image attached to this comment/reply.
+  /// Populated from the backend when present; null for text-only comments.
+  final String? imageUrl;
 
   bool get isReply => parentCommentId != null;
 
@@ -38,9 +43,16 @@ class Comment extends Equatable {
         isDeleted: json['status'] == 'deleted',
         likeCount: readInt(json['likeCount']),
         hasLiked: readBool(json['hasLiked']),
+        imageUrl: readNullableString(json['imageUrl']),
       );
 
-  Comment copyWith({String? body, int? likeCount, bool? hasLiked}) => Comment(
+  Comment copyWith({
+    String? body,
+    int? likeCount,
+    bool? hasLiked,
+    String? imageUrl,
+  }) =>
+      Comment(
         id: id,
         postId: postId,
         authorId: authorId,
@@ -50,8 +62,9 @@ class Comment extends Equatable {
         isDeleted: isDeleted,
         likeCount: likeCount ?? this.likeCount,
         hasLiked: hasLiked ?? this.hasLiked,
+        imageUrl: imageUrl ?? this.imageUrl,
       );
 
   @override
-  List<Object?> get props => [id, body, likeCount, hasLiked, isDeleted];
+  List<Object?> get props => [id, body, likeCount, hasLiked, isDeleted, imageUrl];
 }
